@@ -1,0 +1,15 @@
+[store]
+dir = "/tmp/tip"
+
+[messenger]
+user = "71b72e67-3636-473a-9ee4-db7ba3094057"
+session = "78cbc71b-840d-4e77-bd80-1a981f7d6b0f"
+key = "7MFAzjqB4JyEbYQG5kE1gv551mZZlwKvajVKHk32JVYBlPJ6CfvbSEclr6frnWsLfqpS7er6vbzTaIc2egomUw"
+buffer = 64
+conversation = "1241b00c-54f0-4f75-b91f-dabbccd1f80b"
+
+[node]
+key = "51b0f3a4428b36706de12a51325d46d94a980cee9c29841d60988f1f9c2d63fb"
+signers = [
+  "5JZj14hukDuaz3YKtkaHuXPLRCxZNiv1rgUPPdXAxY4T6tEtLnJm2A7EkLu5jvM6jvrXqTA9nmPBv5fsToPMRAy7b9JiFzgccuwgYRpQv6NkZBK2DZWDrJGPi7wvST3PzSDx9ZYcPpGQP5mvPQctgJCtxLHhMdKoDckf7s91baKt6xJ6JnMjsw"
+]
