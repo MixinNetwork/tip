@@ -12,4 +12,4 @@ User is typically a true human, or some bot code, and they are not connected wit
 
 Trusted Account Manager connects User with some secret seeds, and the Manager usually uses SMS verification to make it easy to use for a normal User.
 
-Trusted Distributed Ledger is a public distributed network, and manages multisig keys for User. User uses and seeds from M to make a signing request to the Ledger and get a signature.
+Trusted Distributed Ledger is a public distributed network, and manages multisig keys for User. User uses PIN and seeds from M to make a signing request to the Ledger and get a signature.
