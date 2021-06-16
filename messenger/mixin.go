@@ -1,0 +1,107 @@
+package messenger
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/hex"
+	"time"
+
+	"github.com/fox-one/mixin-sdk-go"
+)
+
+type MixinConfiguration struct {
+	UserId         string `toml:"user"`
+	SessionId      string `toml:"session"`
+	Key            string `toml:"key"`
+	Buffer         int    `toml:"buffer"`
+	ConversationId string `toml:"conversation"`
+}
+
+type MixinMessenger struct {
+	client         *mixin.Client
+	conversationId string
+	recv           chan []byte
+}
+
+func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMessenger, error) {
+	s := &mixin.Keystore{
+		ClientID:   conf.UserId,
+		SessionID:  conf.SessionId,
+		PrivateKey: conf.Key,
+	}
+
+	client, err := mixin.NewFromKeystore(s)
+	if err != nil {
+		return nil, err
+	}
+
+	mm := &MixinMessenger{
+		client:         client,
+		conversationId: conf.ConversationId,
+		recv:           make(chan []byte, conf.Buffer),
+	}
+	go mm.loop(ctx)
+
+	return mm, nil
+}
+
+func (mm *MixinMessenger) ReceiveMessage(ctx context.Context) ([]byte, error) {
+	select {
+	case b := <-mm.recv:
+		return b, nil
+	case <-ctx.Done():
+		return nil, ErrorDone
+	}
+}
+
+func (mm *MixinMessenger) SendMessage(ctx context.Context, b []byte) error {
+	data := base64.RawURLEncoding.EncodeToString(b)
+	msg := &mixin.MessageRequest{
+		ConversationID: mm.conversationId,
+		Category:       mixin.MessageCategoryPlainText,
+		MessageID:      uniqueMessageId(b),
+		Data:           data,
+	}
+	return mm.client.SendMessage(ctx, msg)
+}
+
+func (mm *MixinMessenger) loop(ctx context.Context) {
+	for {
+		mm.client.LoopBlaze(context.Background(), mm)
+		if ctx.Err() != nil {
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView, userId string) error {
+	if msg.Category != mixin.MessageCategoryPlainText {
+		return nil
+	}
+	if msg.ConversationID != mm.conversationId {
+		return nil
+	}
+	data, err := base64.RawURLEncoding.DecodeString(msg.Data)
+	if err != nil {
+		return nil
+	}
+	data, err = base64.RawURLEncoding.DecodeString(string(data))
+	if err != nil {
+		return nil
+	}
+	select {
+	case mm.recv <- data:
+	case <-ctx.Done():
+	}
+	return nil
+}
+
+func (mm *MixinMessenger) OnAckReceipt(ctx context.Context, msg *mixin.MessageView, userId string) error {
+	return nil
+}
+
+func uniqueMessageId(b []byte) string {
+	s := hex.EncodeToString(b)
+	return mixin.UniqueConversationID(s, s)
+}
