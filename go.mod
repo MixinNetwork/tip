@@ -9,4 +9,5 @@ require (
 	github.com/fox-one/mixin-sdk-go v1.4.6
 	github.com/pelletier/go-toml v1.9.3
 	github.com/urfave/cli/v2 v2.3.0
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 )

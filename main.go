@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
+	"github.com/drand/kyber/util/random"
 	"github.com/urfave/cli/v2"
 )
 
@@ -82,15 +82,9 @@ func runNode(c *cli.Context) error {
 }
 
 func genKey(c *cli.Context) error {
-	var seed [64]byte
-	_, err := rand.Read(seed[:])
-	if err != nil {
-		return err
-	}
-
 	suite := bn256.NewSuiteG2()
-	scalar := suite.Scalar().SetBytes(seed[:])
-	point := suite.G2().Point().Mul(scalar, nil)
+	scalar := suite.Scalar().Pick(random.New())
+	point := suite.Point().Mul(scalar, nil)
 
 	msg := []byte("tip")
 	scheme := bls.NewSchemeOnG1(suite)

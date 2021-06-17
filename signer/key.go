@@ -23,6 +23,19 @@ func PrivateKeyFromHex(s string) (kyber.Scalar, error) {
 	return scalar, nil
 }
 
+func PublicKey(scalar kyber.Scalar) kyber.Point {
+	suite := bn256.NewSuiteG2()
+	return suite.Point().Mul(scalar, nil)
+}
+
+func PublicKeyString(point kyber.Point) string {
+	b, err := point.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return base58.CheckEncode(b, KeyVersion)
+}
+
 func PubKeyFromBase58(s string) (kyber.Point, error) {
 	data, ver, err := base58.CheckDecode(s)
 	if err != nil {
