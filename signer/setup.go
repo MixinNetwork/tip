@@ -8,6 +8,7 @@ import (
 
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/drand/kyber"
+	"github.com/drand/kyber/group/mod"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
@@ -65,7 +66,14 @@ func (node *Node) runDKG(ctx context.Context, nonce uint64) ([]byte, []byte, err
 	}
 	priv := marshalPrivShare(res.Key.PriShare())
 	pub := marshalCommitments(res.Key.Commitments())
-	return priv, pub, nil
+	return pub, priv, nil
+}
+
+func unmarshalPrivShare(b []byte) *share.PriShare {
+	var ps share.PriShare
+	ps.V = mod.NewInt64(0, bn256.Order).SetBytes(b[4:])
+	ps.I = int(binary.BigEndian.Uint32(b[:4]))
+	return &ps
 }
 
 func marshalPrivShare(ps *share.PriShare) []byte {
@@ -76,6 +84,20 @@ func marshalPrivShare(ps *share.PriShare) []byte {
 		panic(err)
 	}
 	return append(buf[:], b...)
+}
+
+func unmarshalCommitments(b []byte) []kyber.Point {
+	var commits []kyber.Point
+	suite := bn256.NewSuiteG2()
+	for i, l := 0, len(b)/128; i < l; i++ {
+		point := suite.G2().Point()
+		err := point.UnmarshalBinary(b[i*128 : (i+1)*128])
+		if err != nil {
+			panic(err)
+		}
+		commits = append(commits, point)
+	}
+	return commits
 }
 
 func marshalCommitments(commits []kyber.Point) []byte {

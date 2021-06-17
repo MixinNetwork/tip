@@ -1,3 +1,6 @@
+[api]
+port = 7000
+
 [store]
 dir = "/tmp/tip"
 

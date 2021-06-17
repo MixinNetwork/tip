@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/messenger"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
@@ -13,6 +14,7 @@ import (
 )
 
 type Configuration struct {
+	API       *api.Configuration            `toml:"api"`
 	Messenger *messenger.MixinConfiguration `toml:"messenger"`
 	Store     *store.BadgerConfiguration    `toml:"store"`
 	Node      *signer.Configuration         `toml:"node"`

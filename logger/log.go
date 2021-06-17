@@ -24,8 +24,16 @@ func Errorf(format string, v ...interface{}) {
 	printfAtLevel(ERROR, format, v...)
 }
 
+func Error(v ...interface{}) {
+	printAtLevel(ERROR, v...)
+}
+
 func Infof(format string, v ...interface{}) {
 	printfAtLevel(INFO, format, v...)
+}
+
+func Info(v ...interface{}) {
+	printAtLevel(INFO, v...)
 }
 
 func Verbosef(format string, v ...interface{}) {
@@ -38,6 +46,10 @@ func Verbose(v ...interface{}) {
 
 func Debugf(format string, v ...interface{}) {
 	printfAtLevel(DEBUG, format, v...)
+}
+
+func Debug(v ...interface{}) {
+	printAtLevel(DEBUG, v...)
 }
 
 func printfAtLevel(l int, format string, v ...interface{}) {

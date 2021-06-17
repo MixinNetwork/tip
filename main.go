@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/config"
 	"github.com/MixinNetwork/tip/messenger"
 	"github.com/MixinNetwork/tip/signer"
@@ -82,7 +83,15 @@ func runNode(c *cli.Context) error {
 	}
 
 	node := signer.NewNode(ctx, store, messenger, conf.Node)
-	return node.Run(ctx)
+	go node.Run(ctx)
+
+	ac := conf.API
+	ac.Identity = node.GetIdentity()
+	ac.Signers = node.GetSigners()
+	ac.Poly = node.GetPoly()
+	ac.Share = node.GetShare()
+	server := api.NewServer(store, ac)
+	return server.ListenAndServe()
 }
 
 func requestSetup(c *cli.Context) error {

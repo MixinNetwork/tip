@@ -10,6 +10,7 @@ import (
 	"github.com/MixinNetwork/tip/messenger"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
+	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
 )
 
@@ -31,6 +32,9 @@ type Node struct {
 	index    int
 	signers  []dkg.Node
 	period   time.Duration
+
+	share *share.PriShare
+	poly  []kyber.Point
 }
 
 func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messenger, conf *Configuration) *Node {
@@ -65,18 +69,40 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 		panic(node.index)
 	}
 
+	logger.Infof("Idenity: %s\n", PublicKeyString(node.identity))
+
 	poly, err := store.ReadPolyPublic()
 	if err != nil {
 		panic(err)
+	} else if len(poly) > 0 {
+		logger.Infof("Poly public: %s\n", hex.EncodeToString(poly))
+		node.poly = unmarshalCommitments(poly)
 	}
+
 	priv, err := store.ReadPolyShare()
 	if err != nil {
 		panic(err)
+	} else if len(priv) > 0 {
+		logger.Infof("Poly share: %s\n", hex.EncodeToString(priv))
+		node.share = unmarshalPrivShare(priv)
 	}
-	logger.Infof("Idenity: %s\n", PublicKeyString(node.identity))
-	logger.Infof("Poly share: %s\n", hex.EncodeToString(priv))
-	logger.Infof("Poly public: %s\n", hex.EncodeToString(poly))
 	return node
+}
+
+func (node *Node) GetIdentity() kyber.Point {
+	return node.identity
+}
+
+func (node *Node) GetSigners() []dkg.Node {
+	return node.signers
+}
+
+func (node *Node) GetShare() share.PriShare {
+	return *node.share
+}
+
+func (node *Node) GetPoly() []kyber.Point {
+	return node.poly
 }
 
 func (node *Node) Run(ctx context.Context) error {
