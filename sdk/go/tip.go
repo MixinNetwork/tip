@@ -8,6 +8,7 @@ import (
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
+	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/sign/tbls"
 )
 
@@ -76,5 +77,13 @@ func (c *Client) Sign(id string) ([]byte, error) {
 	suite := bn256.NewSuiteG2()
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	pub := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
-	return scheme.Recover(pub, []byte(id), partials, len(c.commitments), len(c.signers))
+	sig, err := scheme.Recover(pub, []byte(id), partials, len(c.commitments), len(c.signers))
+	if err != nil {
+		return nil, err
+	}
+	err = bls.NewSchemeOnG1(suite).Verify(pub.Commit(), []byte(id), sig)
+	if err != nil {
+		return nil, err
+	}
+	return sig, nil
 }
