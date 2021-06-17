@@ -2,6 +2,9 @@ package config
 
 import (
 	"os"
+	"os/user"
+	"path/filepath"
+	"strings"
 
 	"github.com/MixinNetwork/tip/messenger"
 	"github.com/MixinNetwork/tip/signer"
@@ -16,6 +19,10 @@ type Configuration struct {
 }
 
 func ReadConfiguration(path string) (*Configuration, error) {
+	if strings.HasPrefix(path, "~/") {
+		usr, _ := user.Current()
+		path = filepath.Join(usr.HomeDir, (path)[2:])
+	}
 	f, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

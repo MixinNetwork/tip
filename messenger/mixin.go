@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/MixinNetwork/tip/logger"
 	"github.com/fox-one/mixin-sdk-go"
 )
 
@@ -60,14 +61,15 @@ func (mm *MixinMessenger) SendMessage(ctx context.Context, b []byte) error {
 		ConversationID: mm.conversationId,
 		Category:       mixin.MessageCategoryPlainText,
 		MessageID:      uniqueMessageId(b),
-		Data:           data,
+		Data:           base64.RawURLEncoding.EncodeToString([]byte(data)),
 	}
 	return mm.client.SendMessage(ctx, msg)
 }
 
 func (mm *MixinMessenger) loop(ctx context.Context) {
 	for {
-		mm.client.LoopBlaze(context.Background(), mm)
+		err := mm.client.LoopBlaze(context.Background(), mm)
+		logger.Errorf("LoopBlaze %s\n", err)
 		if ctx.Err() != nil {
 			break
 		}
@@ -82,7 +84,7 @@ func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView,
 	if msg.ConversationID != mm.conversationId {
 		return nil
 	}
-	data, err := base64.RawURLEncoding.DecodeString(msg.Data)
+	data, err := base64.StdEncoding.DecodeString(msg.Data)
 	if err != nil {
 		return nil
 	}

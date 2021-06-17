@@ -313,6 +313,11 @@ func (enc *Encoder) WriteUint32(d uint32) {
 	enc.Write(b)
 }
 
+func (enc *Encoder) WriteUint64(d uint64) {
+	b := uint64ToBytes(d)
+	enc.Write(b)
+}
+
 func (enc *Encoder) WriteBool(b bool) {
 	if b {
 		enc.buf.WriteByte(1)
@@ -324,5 +329,11 @@ func (enc *Encoder) WriteBool(b bool) {
 func uint32ToBytes(d uint32) []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, d)
+	return b
+}
+
+func uint64ToBytes(d uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, d)
 	return b
 }

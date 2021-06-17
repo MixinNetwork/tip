@@ -24,6 +24,9 @@ func (bs *BadgerStorage) ReadPolyShare() ([]byte, error) {
 	defer txn.Discard()
 
 	item, err := txn.Get([]byte(badgerKeyPolyShare))
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +38,9 @@ func (bs *BadgerStorage) ReadPolyPublic() ([]byte, error) {
 	defer txn.Discard()
 
 	item, err := txn.Get([]byte(badgerKeyPolyPublic))
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}

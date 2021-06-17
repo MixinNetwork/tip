@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
-	"os/user"
-	"path/filepath"
-	"strings"
 
 	"github.com/MixinNetwork/tip/config"
 	"github.com/MixinNetwork/tip/messenger"
@@ -25,17 +23,28 @@ func main() {
 		Usage:                "TIP (Throttled Identity PIN) is a decentralized key custodian.",
 		Version:              "0.0.1",
 		EnableBashCompletion: true,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Value:   "~/.tip/config.toml",
+				Usage:   "Configuration file path",
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:   "node",
 				Usage:  "Run the signer node",
 				Action: runNode,
+			},
+			{
+				Name:   "setup",
+				Usage:  "Request a DKG setup",
+				Action: requestSetup,
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "config",
-						Aliases: []string{"c"},
-						Value:   "~/.tip/config.toml",
-						Usage:   "configuration file path",
+					&cli.Uint64Flag{
+						Name:  "nonce",
+						Usage: "The nonce should match all other nodes",
 					},
 				},
 			},
@@ -57,11 +66,6 @@ func runNode(c *cli.Context) error {
 	ctx := context.Background()
 
 	cp := c.String("config")
-	if strings.HasPrefix(cp, "~/") {
-		usr, _ := user.Current()
-		cp = filepath.Join(usr.HomeDir, (cp)[2:])
-	}
-
 	conf, err := config.ReadConfiguration(cp)
 	if err != nil {
 		return err
@@ -79,6 +83,36 @@ func runNode(c *cli.Context) error {
 
 	node := signer.NewNode(ctx, store, messenger, conf.Node)
 	return node.Run(ctx)
+}
+
+func requestSetup(c *cli.Context) error {
+	ctx := context.Background()
+
+	nonce := c.Uint64("nonce")
+	if nonce < 1024 {
+		return fmt.Errorf("nonce too small")
+	}
+
+	cp := c.String("config")
+	conf, err := config.ReadConfiguration(cp)
+	if err != nil {
+		return err
+	}
+
+	key, err := signer.PrivateKeyFromHex(conf.Node.Key)
+	if err != nil {
+		panic(conf.Node.Key)
+	}
+
+	messenger, err := messenger.NewMixinMessenger(ctx, conf.Messenger)
+	if err != nil {
+		panic(err)
+	}
+
+	msg := signer.MakeSetupMessage(ctx, key, nonce)
+	data := base64.RawURLEncoding.EncodeToString(msg)
+	fmt.Println(data, len(msg))
+	return messenger.SendMessage(ctx, msg)
 }
 
 func genKey(c *cli.Context) error {

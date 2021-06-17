@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
 )
@@ -30,6 +31,13 @@ type SetupBundle struct {
 	Timestamp time.Time
 }
 
+func encodeSetupBundle(sb *SetupBundle) []byte {
+	enc := NewEncoder()
+	enc.WriteUint64(sb.Nonce)
+	enc.WriteUint64(uint64(sb.Timestamp.UnixNano()))
+	return enc.buf.Bytes()
+}
+
 func decodeSetupBundle(b []byte) (*SetupBundle, error) {
 	sb := &SetupBundle{}
 	dec := NewDecoder(b)
@@ -46,6 +54,14 @@ func decodeSetupBundle(b []byte) (*SetupBundle, error) {
 	}
 	sb.Timestamp = time.Unix(0, int64(ts))
 	return sb, nil
+}
+
+func MakeSetupMessage(ctx context.Context, key kyber.Scalar, nonce uint64) []byte {
+	data := encodeSetupBundle(&SetupBundle{
+		Nonce:     nonce,
+		Timestamp: time.Now(),
+	})
+	return makeMessage(key, MessageActionSetup, data)
 }
 
 func (node *Node) handleSetupMessage(ctx context.Context, msg *Message) error {
@@ -70,13 +86,13 @@ func (node *Node) handleSetupMessage(ctx context.Context, msg *Message) error {
 	}
 	node.setupActions[msg.Sender] = sb
 	if len(node.setupActions) >= node.Threshold() {
-		return node.Setup(ctx, sb.Nonce)
+		go node.Setup(ctx, sb.Nonce)
 	}
 	return nil
 }
 
-func (t *Board) makeMessage(action int, data []byte) []byte {
-	point := PublicKey(t.key)
+func makeMessage(key kyber.Scalar, action int, data []byte) []byte {
+	point := PublicKey(key)
 	msg := &Message{
 		Action: action,
 		Sender: PublicKeyString(point),
@@ -85,7 +101,7 @@ func (t *Board) makeMessage(action int, data []byte) []byte {
 	b := encodeMessage(msg)
 	suite := bn256.NewSuiteG2()
 	scheme := bls.NewSchemeOnG1(suite)
-	sig, err := scheme.Sign(t.key, b)
+	sig, err := scheme.Sign(key, b)
 	if err != nil {
 		panic(err)
 	}

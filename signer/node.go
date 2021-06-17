@@ -2,12 +2,15 @@ package signer
 
 import (
 	"context"
+	"encoding/hex"
 	"sort"
 	"time"
 
+	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/messenger"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
+	"github.com/drand/kyber/share/dkg"
 )
 
 type Configuration struct {
@@ -26,7 +29,7 @@ type Node struct {
 	key      kyber.Scalar
 	identity kyber.Point
 	index    int
-	signers  []kyber.Point
+	signers  []dkg.Node
 	period   time.Duration
 }
 
@@ -49,7 +52,10 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 		if err != nil {
 			panic(s)
 		}
-		node.signers = append(node.signers, point)
+		node.signers = append(node.signers, dkg.Node{
+			Index:  uint32(i),
+			Public: point,
+		})
 		if node.identity.Equal(point) {
 			node.index = i
 		}
@@ -58,6 +64,18 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 	if node.index < 0 {
 		panic(node.index)
 	}
+
+	poly, err := store.ReadPolyPublic()
+	if err != nil {
+		panic(err)
+	}
+	priv, err := store.ReadPolyShare()
+	if err != nil {
+		panic(err)
+	}
+	logger.Infof("Idenity: %s\n", PublicKeyString(node.identity))
+	logger.Infof("Poly share: %s\n", hex.EncodeToString(priv))
+	logger.Infof("Poly public: %s\n", hex.EncodeToString(poly))
 	return node
 }
 
@@ -69,23 +87,28 @@ func (node *Node) Run(ctx context.Context) error {
 		}
 		msg, err := decodeMessage(b)
 		if err != nil {
-			panic(err)
+			logger.Errorf("msg decode error %d %s", len(b), err)
+			continue
 		}
 		switch msg.Action {
 		case MessageActionSetup:
-			node.handleSetupMessage(ctx, msg)
+			err = node.handleSetupMessage(ctx, msg)
+			logger.Verbose("SETUP", err)
 		case MessageActionDKGDeal:
 			db, err := decodeDealBundle(msg.Data)
+			logger.Verbose("DEAL", err)
 			if err != nil {
 				node.board.deals <- *db
 			}
 		case MessageActionDKGResponse:
 			rb, err := decodeResponseBundle(msg.Data)
+			logger.Verbose("RESPONSE", err)
 			if err != nil {
 				node.board.resps <- *rb
 			}
 		case MessageActionDKGJustify:
 			jb, err := decodeJustificationBundle(msg.Data)
+			logger.Verbose("JUSTIFICATION", err)
 			if err != nil {
 				node.board.justs <- *jb
 			}

@@ -40,7 +40,7 @@ func (node *Node) runDKG(ctx context.Context, nonce uint64) ([]byte, []byte, err
 		Nonce:     node.getNonce(nonce),
 		Auth:      bls.NewSchemeOnG1(suite),
 		FastSync:  false,
-		NewNodes:  nil,
+		NewNodes:  node.signers,
 	}
 
 	node.board = node.NewBoard(ctx)
@@ -91,7 +91,7 @@ func marshalCommitments(commits []kyber.Point) []byte {
 func (node *Node) getNonce(nonce uint64) []byte {
 	var data []byte
 	for _, s := range node.signers {
-		b, err := s.MarshalBinary()
+		b, err := s.Public.MarshalBinary()
 		if err != nil {
 			panic(s)
 		}
