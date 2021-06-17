@@ -2,6 +2,7 @@ package signer
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -147,4 +148,29 @@ func decodeMessage(b []byte) (*Message, error) {
 	msg.Signature = sig
 
 	return msg, nil
+}
+
+func (node *Node) verifyMessage(msg *Message) error {
+	sender := node.checkSigner(msg.Sender)
+	if sender == nil {
+		return fmt.Errorf("unauthorized sender %s", msg.Sender)
+	}
+	b := encodeMessage(&Message{
+		Action: msg.Action,
+		Sender: msg.Sender,
+		Data:   msg.Data,
+	})
+
+	suite := bn256.NewSuiteG2()
+	scheme := bls.NewSchemeOnG1(suite)
+	return scheme.Verify(sender, b, msg.Signature)
+}
+
+func (node *Node) checkSigner(sender string) kyber.Point {
+	for _, s := range node.signers {
+		if PublicKeyString(s.Public) == sender {
+			return s.Public
+		}
+	}
+	return nil
 }

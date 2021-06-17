@@ -90,6 +90,11 @@ func (node *Node) Run(ctx context.Context) error {
 			logger.Errorf("msg decode error %d %s", len(b), err)
 			continue
 		}
+		err = node.verifyMessage(msg)
+		if err != nil {
+			logger.Errorf("msg verify error %d %s", len(b), err)
+			continue
+		}
 		switch msg.Action {
 		case MessageActionSetup:
 			err = node.handleSetupMessage(ctx, msg)
