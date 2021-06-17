@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"os"
 
 	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/config"
 	"github.com/MixinNetwork/tip/messenger"
+	tip "github.com/MixinNetwork/tip/sdk/go"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/btcsuite/btcutil/base58"
@@ -53,6 +55,21 @@ func main() {
 				Name:   "key",
 				Usage:  "Generate a key pair",
 				Action: genKey,
+			},
+			{
+				Name:   "sign",
+				Usage:  "Request a signature",
+				Action: requestSign,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "config",
+						Usage: "The signers configuration",
+					},
+					&cli.StringFlag{
+						Name:  "id",
+						Usage: "The idenity to sign",
+					},
+				},
 			},
 		},
 	}
@@ -147,5 +164,26 @@ func genKey(c *cli.Context) error {
 	pub := base58.CheckEncode(b, signer.KeyVersion)
 	fmt.Println(scalar)
 	fmt.Println(pub, err)
+	return nil
+}
+
+func requestSign(c *cli.Context) error {
+	f, err := os.ReadFile(c.String("config"))
+	if err != nil {
+		return err
+	}
+	conf, err := tip.LoadConfigurationJSON(string(f))
+	if err != nil {
+		return err
+	}
+	client, err := tip.NewClient(conf)
+	if err != nil {
+		return err
+	}
+	sig, err := client.Sign(c.String("id"))
+	if err != nil {
+		return err
+	}
+	fmt.Println(hex.EncodeToString(sig))
 	return nil
 }
