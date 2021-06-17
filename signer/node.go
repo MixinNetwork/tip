@@ -97,19 +97,19 @@ func (node *Node) Run(ctx context.Context) error {
 		case MessageActionDKGDeal:
 			db, err := decodeDealBundle(msg.Data)
 			logger.Verbose("DEAL", err)
-			if err != nil {
+			if err == nil && node.board != nil {
 				node.board.deals <- *db
 			}
 		case MessageActionDKGResponse:
 			rb, err := decodeResponseBundle(msg.Data)
 			logger.Verbose("RESPONSE", err)
-			if err != nil {
+			if err == nil && node.board != nil {
 				node.board.resps <- *rb
 			}
 		case MessageActionDKGJustify:
 			jb, err := decodeJustificationBundle(msg.Data)
 			logger.Verbose("JUSTIFICATION", err)
-			if err != nil {
+			if err == nil && node.board != nil {
 				node.board.justs <- *jb
 			}
 		}

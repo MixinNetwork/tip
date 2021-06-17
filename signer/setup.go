@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MixinNetwork/tip/logger"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
@@ -25,6 +26,7 @@ func (node *Node) Setup(ctx context.Context, nonce uint64) error {
 	}
 
 	pub, priv, err = node.runDKG(ctx, nonce)
+	logger.Verbose("runDKG", pub, priv, err)
 	if err != nil {
 		return err
 	}
@@ -52,7 +54,7 @@ func (node *Node) runDKG(ctx context.Context, nonce uint64) ([]byte, []byte, err
 		return nil, nil, err
 	}
 	resCh := protocol.WaitEnd()
-	phaser.Start()
+	go phaser.Start()
 	optRes := <-resCh
 	if optRes.Error != nil {
 		return nil, nil, optRes.Error
