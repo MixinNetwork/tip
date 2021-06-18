@@ -13,8 +13,6 @@ import (
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/sign/bls"
 )
 
 const (
@@ -84,8 +82,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, uint64(grace))
 	msg = append(msg, buf...)
-	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
-	err = scheme.Verify(pub, msg, sig)
+	err = crypto.Verify(pub, msg, sig)
 	if err == nil {
 		return available, nil
 	}

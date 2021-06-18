@@ -7,11 +7,22 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
+	"github.com/drand/kyber/sign/bls"
 )
 
 const (
 	KeyVersion = 'T'
 )
+
+func Sign(scalar kyber.Scalar, msg []byte) ([]byte, error) {
+	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
+	return scheme.Sign(scalar, msg)
+}
+
+func Verify(pub kyber.Point, msg, sig []byte) error {
+	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
+	return scheme.Verify(pub, msg, sig)
+}
 
 func PrivateKeyFromHex(s string) (kyber.Scalar, error) {
 	seed, err := hex.DecodeString(s)

@@ -11,7 +11,6 @@ import (
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
-	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/sign/tbls"
 	"golang.org/x/crypto/sha3"
 )
@@ -97,8 +96,7 @@ func (c *Client) Sign(ks, ns string, nonce, grace int64) ([]byte, []*signerPair,
 		msg = append(msg, buf...)
 		binary.BigEndian.PutUint64(buf, uint64(grace))
 		msg = append(msg, buf...)
-		scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
-		sig, _ := scheme.Sign(key, msg)
+		sig, _ := crypto.Sign(key, msg)
 		b, _ := json.Marshal(map[string]interface{}{
 			"identity":  crypto.PublicKeyString(pkey),
 			"ephemeral": hex.EncodeToString(sum[:]),
@@ -132,12 +130,12 @@ func (c *Client) Sign(ks, ns string, nonce, grace int64) ([]byte, []*signerPair,
 	}
 	id, suite := crypto.PublicKeyString(pkey), bn256.NewSuiteG2()
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
-	pub := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
-	sig, err := scheme.Recover(pub, []byte(id), partials, len(c.commitments), len(c.signers))
+	poly := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
+	sig, err := scheme.Recover(poly, []byte(id), partials, len(c.commitments), len(c.signers))
 	if err != nil {
 		return nil, evicted, err
 	}
-	err = bls.NewSchemeOnG1(suite).Verify(pub.Commit(), []byte(id), sig)
+	err = crypto.Verify(poly.Commit(), []byte(id), sig)
 	if err != nil {
 		return nil, evicted, err
 	}

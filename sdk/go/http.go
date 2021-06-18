@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/sign/bls"
 )
 
 var httpClient *http.Client
@@ -75,8 +73,7 @@ func request(sp *signerPair, method string, data []byte) (*ResponseData, error) 
 	if err != nil {
 		return nil, err
 	}
-	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
-	err = scheme.Verify(pub, data, sig)
+	err = crypto.Verify(pub, data, sig)
 	if err != nil {
 		return nil, err
 	}

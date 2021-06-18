@@ -8,8 +8,6 @@ import (
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/sign/bls"
 )
 
 const (
@@ -101,9 +99,7 @@ func makeMessage(key kyber.Scalar, action int, data []byte) []byte {
 		Data:   data,
 	}
 	b := encodeMessage(msg)
-	suite := bn256.NewSuiteG2()
-	scheme := bls.NewSchemeOnG1(suite)
-	sig, err := scheme.Sign(key, b)
+	sig, err := crypto.Sign(key, b)
 	if err != nil {
 		panic(err)
 	}
@@ -162,9 +158,7 @@ func (node *Node) verifyMessage(msg *Message) error {
 		Data:   msg.Data,
 	})
 
-	suite := bn256.NewSuiteG2()
-	scheme := bls.NewSchemeOnG1(suite)
-	return scheme.Verify(sender, b, msg.Signature)
+	return crypto.Verify(sender, b, msg.Signature)
 }
 
 func (node *Node) checkSigner(sender string) kyber.Point {

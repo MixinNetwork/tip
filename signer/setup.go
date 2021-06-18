@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/group/mod"
@@ -88,10 +89,8 @@ func marshalPrivShare(ps *share.PriShare) []byte {
 
 func unmarshalCommitments(b []byte) []kyber.Point {
 	var commits []kyber.Point
-	suite := bn256.NewSuiteG2()
 	for i, l := 0, len(b)/128; i < l; i++ {
-		point := suite.G2().Point()
-		err := point.UnmarshalBinary(b[i*128 : (i+1)*128])
+		point, err := crypto.PubKeyFromBytes(b[i*128 : (i+1)*128])
 		if err != nil {
 			panic(err)
 		}

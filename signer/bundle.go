@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share/dkg"
 )
@@ -191,14 +192,12 @@ func decodeDealBundle(b []byte) (*dkg.DealBundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	suite := bn256.NewSuiteG2()
 	for ; pl > 0; pl-- {
 		pb, err := dec.ReadBytes()
 		if err != nil {
 			return nil, err
 		}
-		point := suite.G2().Point()
-		err = point.UnmarshalBinary(pb)
+		point, err := crypto.PubKeyFromBytes(pb)
 		if err != nil {
 			return nil, err
 		}

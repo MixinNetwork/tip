@@ -11,7 +11,6 @@ import (
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
-	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/sign/tbls"
 )
 
@@ -40,8 +39,7 @@ func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, 
 		"commitments": commitments,
 	}
 	b, _ := json.Marshal(data)
-	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
-	sig, _ := scheme.Sign(key, b)
+	sig, _ := crypto.Sign(key, b)
 	return data, hex.EncodeToString(sig)
 }
 
@@ -59,7 +57,6 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 		"partial": hex.EncodeToString(partial),
 	}
 	b, _ := json.Marshal(data)
-	sch := bls.NewSchemeOnG1(bn256.NewSuiteG2())
-	sig, _ := sch.Sign(key, b)
+	sig, _ := crypto.Sign(key, b)
 	return data, hex.EncodeToString(sig), nil
 }
