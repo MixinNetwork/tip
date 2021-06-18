@@ -1,11 +1,13 @@
 package tip
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
-	"github.com/MixinNetwork/tip/signer"
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
@@ -27,7 +29,7 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 
 	cli := &Client{signers: conf.Signers}
 	for _, c := range conf.Commitments {
-		point, _ := signer.PubKeyFromBase58(c)
+		point, _ := crypto.PubKeyFromBase58(c)
 		cli.commitments = append(cli.commitments, point)
 	}
 
@@ -71,15 +73,15 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 }
 
 func (c *Client) Sign(ks, ns string, nonce int64) ([]byte, []*signerPair, error) {
-	key, err := signer.PrivateKeyFromHex(ks)
+	key, err := crypto.PrivateKeyFromHex(ks)
 	if err != nil {
 		return nil, nil, err
 	}
-	_, err = signer.PrivateKeyFromHex(ns)
+	_, err = crypto.PrivateKeyFromHex(ns)
 	if err != nil {
 		return nil, nil, err
 	}
-	pkey := signer.PublicKey(key)
+	pkey := crypto.PublicKey(key)
 
 	var partials [][]byte
 	var evicted []*signerPair
@@ -90,13 +92,25 @@ func (c *Client) Sign(ks, ns string, nonce int64) ([]byte, []*signerPair, error)
 			panic(err)
 		}
 		msg = append(msg, sum[:]...)
+		buf := make([]byte, 8)
+		binary.BigEndian.PutUint64(buf, uint64(nonce))
+		msg = append(msg, buf...)
 		scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
 		sig, _ := scheme.Sign(key, msg)
-		data, _ := json.Marshal(map[string]interface{}{
-			"identity":  signer.PublicKeyString(pkey),
+		b, _ := json.Marshal(map[string]interface{}{
+			"identity":  crypto.PublicKeyString(pkey),
 			"ephemeral": hex.EncodeToString(sum[:]),
-			"signature": hex.EncodeToString(sig),
 			"nonce":     nonce,
+		})
+		spub, err := crypto.PubKeyFromBase58(s.Identity)
+		if err != nil {
+			panic(err)
+		}
+		cipher := crypto.Encrypt(spub, key, b)
+		data, _ := json.Marshal(map[string]interface{}{
+			"identity":  crypto.PublicKeyString(pkey),
+			"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),
+			"signature": hex.EncodeToString(sig),
 		})
 		res, err := request(s, "POST", data)
 		if err != nil {
@@ -113,7 +127,7 @@ func (c *Client) Sign(ks, ns string, nonce int64) ([]byte, []*signerPair, error)
 	if len(partials) < len(c.commitments) {
 		return nil, evicted, fmt.Errorf("not enought partials %d %d", len(partials), len(c.commitments))
 	}
-	id, suite := signer.PublicKeyString(pkey), bn256.NewSuiteG2()
+	id, suite := crypto.PublicKeyString(pkey), bn256.NewSuiteG2()
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	pub := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
 	sig, err := scheme.Recover(pub, []byte(id), partials, len(c.commitments), len(c.signers))

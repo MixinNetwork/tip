@@ -1,13 +1,18 @@
 package keeper
 
 import (
+	"crypto/aes"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"time"
 
-	"github.com/MixinNetwork/tip/signer"
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/store"
+	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
 )
@@ -18,14 +23,32 @@ const (
 	LimitQuota       = 5
 )
 
-func Check(store store.Storage, identity, ephemeral, signature string, nonce int64) (int, error) {
-	pub, err := signer.PubKeyFromBase58(identity)
+func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (int, error) {
+	b, err := base64.RawURLEncoding.DecodeString(data)
+	if err != nil || len(b) < aes.BlockSize*2 {
+		return 0, fmt.Errorf("invalid data %s", data)
+	}
+	pub, err := crypto.PubKeyFromBase58(identity)
 	if err != nil {
 		return 0, fmt.Errorf("invalid idenity %s", identity)
 	}
-	nb, valid := new(big.Int).SetString(ephemeral, 16)
+	b = crypto.Decrypt(pub, priv, b)
+
+	var body struct {
+		Identity  string `json:"identity"`
+		Ephemeral string `json:"ephemeral"`
+		Nonce     int64  `json:"nonce"`
+	}
+	err = json.Unmarshal(b, &body)
+	if err != nil {
+		return 0, fmt.Errorf("invalid data %s", string(b))
+	}
+	if body.Identity != identity {
+		return 0, fmt.Errorf("invalid idenity %s", identity)
+	}
+	nb, valid := new(big.Int).SetString(body.Ephemeral, 16)
 	if !valid {
-		return 0, fmt.Errorf("invalid ephemeral %s", ephemeral)
+		return 0, fmt.Errorf("invalid ephemeral %s", body.Ephemeral)
 	}
 	sig, err := hex.DecodeString(signature)
 	if err != nil {
@@ -36,7 +59,7 @@ func Check(store store.Storage, identity, ephemeral, signature string, nonce int
 		panic(err)
 	}
 
-	valid, err = store.CheckNonce(key, nb.Bytes(), uint64(nonce), NonceGracePeriod)
+	valid, err = store.CheckNonce(key, nb.Bytes(), uint64(body.Nonce), NonceGracePeriod)
 	if err != nil {
 		return 0, err
 	} else if !valid {
@@ -51,6 +74,9 @@ func Check(store store.Storage, identity, ephemeral, signature string, nonce int
 	}
 
 	msg := append(key, nb.Bytes()...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(body.Nonce))
+	msg = append(msg, buf...)
 	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
 	err = scheme.Verify(pub, msg, sig)
 	if err == nil {

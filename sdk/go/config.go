@@ -3,7 +3,7 @@ package tip
 import (
 	"encoding/json"
 
-	"github.com/MixinNetwork/tip/signer"
+	"github.com/MixinNetwork/tip/crypto"
 )
 
 type signerPair struct {
@@ -30,7 +30,7 @@ func (conf *Configuration) validate() error {
 		return ErrInvalidConfiguration
 	}
 	for _, c := range conf.Commitments {
-		_, err := signer.PubKeyFromBase58(c)
+		_, err := crypto.PubKeyFromBase58(c)
 		if err != nil {
 			return ErrInvalidConfiguration
 		}

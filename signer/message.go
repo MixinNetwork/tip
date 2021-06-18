@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
@@ -93,10 +94,10 @@ func (node *Node) handleSetupMessage(ctx context.Context, msg *Message) error {
 }
 
 func makeMessage(key kyber.Scalar, action int, data []byte) []byte {
-	point := PublicKey(key)
+	point := crypto.PublicKey(key)
 	msg := &Message{
 		Action: action,
-		Sender: PublicKeyString(point),
+		Sender: crypto.PublicKeyString(point),
 		Data:   data,
 	}
 	b := encodeMessage(msg)
@@ -168,7 +169,7 @@ func (node *Node) verifyMessage(msg *Message) error {
 
 func (node *Node) checkSigner(sender string) kyber.Point {
 	for _, s := range node.signers {
-		if PublicKeyString(s.Public) == sender {
+		if crypto.PublicKeyString(s.Public) == sender {
 			return s.Public
 		}
 	}

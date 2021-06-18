@@ -9,11 +9,11 @@ import (
 
 	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/config"
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/messenger"
 	tip "github.com/MixinNetwork/tip/sdk/go"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/util/random"
@@ -133,7 +133,7 @@ func requestSetup(c *cli.Context) error {
 		return err
 	}
 
-	key, err := signer.PrivateKeyFromHex(conf.Node.Key)
+	key, err := crypto.PrivateKeyFromHex(conf.Node.Key)
 	if err != nil {
 		panic(conf.Node.Key)
 	}
@@ -165,11 +165,7 @@ func genKey(c *cli.Context) error {
 		return err
 	}
 
-	b, err := point.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	pub := base58.CheckEncode(b, signer.KeyVersion)
+	pub := crypto.PublicKeyString(point)
 	fmt.Println(scalar)
 	fmt.Println(pub, err)
 	return nil

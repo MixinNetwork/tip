@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/messenger"
 	"github.com/MixinNetwork/tip/store"
@@ -44,15 +45,15 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 		setupActions: make(map[string]*SetupBundle),
 		index:        -1,
 	}
-	scalar, err := PrivateKeyFromHex(conf.Key)
+	scalar, err := crypto.PrivateKeyFromHex(conf.Key)
 	if err != nil {
 		panic(conf.Key)
 	}
 	node.key = scalar
-	node.identity = PublicKey(scalar)
+	node.identity = crypto.PublicKey(scalar)
 	sort.Slice(conf.Signers, func(i, j int) bool { return conf.Signers[i] < conf.Signers[j] })
 	for i, s := range conf.Signers {
-		point, err := PubKeyFromBase58(s)
+		point, err := crypto.PubKeyFromBase58(s)
 		if err != nil {
 			panic(s)
 		}
@@ -69,7 +70,7 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 		panic(node.index)
 	}
 
-	logger.Infof("Idenity: %s\n", PublicKeyString(node.identity))
+	logger.Infof("Idenity: %s\n", crypto.PublicKeyString(node.identity))
 
 	poly, err := store.ReadPolyPublic()
 	if err != nil {

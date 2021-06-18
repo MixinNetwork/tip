@@ -1,4 +1,4 @@
-package signer
+package crypto
 
 import (
 	"encoding/hex"
@@ -36,16 +36,20 @@ func PublicKeyString(point kyber.Point) string {
 	return base58.CheckEncode(b, KeyVersion)
 }
 
+func PubKeyFromBytes(b []byte) (kyber.Point, error) {
+	suite := bn256.NewSuiteG2()
+	point := suite.G2().Point()
+	err := point.UnmarshalBinary(b)
+	return point, err
+}
+
 func PubKeyFromBase58(s string) (kyber.Point, error) {
-	data, ver, err := base58.CheckDecode(s)
+	b, ver, err := base58.CheckDecode(s)
 	if err != nil {
 		return nil, err
 	}
 	if ver != KeyVersion {
 		return nil, fmt.Errorf("invalid version %d", ver)
 	}
-	suite := bn256.NewSuiteG2()
-	point := suite.G2().Point()
-	err = point.UnmarshalBinary(data)
-	return point, err
+	return PubKeyFromBytes(b)
 }

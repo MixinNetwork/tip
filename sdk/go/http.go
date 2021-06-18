@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MixinNetwork/tip/signer"
+	"github.com/MixinNetwork/tip/crypto"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
 )
@@ -67,7 +67,7 @@ func request(sp *signerPair, method string, data []byte) (*ResponseData, error) 
 	if err != nil {
 		return nil, err
 	}
-	pub, err := signer.PubKeyFromBase58(sp.Identity)
+	pub, err := crypto.PubKeyFromBase58(sp.Identity)
 	if err != nil {
 		return nil, err
 	}
