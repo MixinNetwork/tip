@@ -8,5 +8,5 @@ type Storage interface {
 	WritePoly(public, share []byte) error
 
 	CheckLimit(key []byte, window time.Duration, quota uint32, count bool) (int, error)
-	CheckNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error)
+	CheckEphemeralNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error)
 }

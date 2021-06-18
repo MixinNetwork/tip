@@ -61,7 +61,7 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 	return int(available), err
 }
 
-func (bs *BadgerStorage) CheckNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error) {
+func (bs *BadgerStorage) CheckEphemeralNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error) {
 	var valid bool
 	buf, now := make([]byte, 8), time.Now().UnixNano()
 	binary.BigEndian.PutUint64(buf, uint64(now))

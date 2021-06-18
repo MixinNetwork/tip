@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	NonceGracePeriod = time.Hour * 24 * 128
-	LimitWindow      = time.Hour * 24 * 7
-	LimitQuota       = 5
+	EphemeralGracePeriod = time.Hour * 24 * 128
+	LimitWindow          = time.Hour * 24 * 7
+	LimitQuota           = 5
 )
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (int, error) {
@@ -46,7 +46,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if body.Identity != identity {
 		return 0, fmt.Errorf("invalid idenity %s", identity)
 	}
-	nb, valid := new(big.Int).SetString(body.Ephemeral, 16)
+	eb, valid := new(big.Int).SetString(body.Ephemeral, 16)
 	if !valid {
 		return 0, fmt.Errorf("invalid ephemeral %s", body.Ephemeral)
 	}
@@ -59,7 +59,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		panic(err)
 	}
 
-	valid, err = store.CheckNonce(key, nb.Bytes(), uint64(body.Nonce), NonceGracePeriod)
+	valid, err = store.CheckEphemeralNonce(key, eb.Bytes(), uint64(body.Nonce), EphemeralGracePeriod)
 	if err != nil {
 		return 0, err
 	} else if !valid {
@@ -73,7 +73,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return 0, nil
 	}
 
-	msg := append(key, nb.Bytes()...)
+	msg := append(key, eb.Bytes()...)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(body.Nonce))
 	msg = append(msg, buf...)
