@@ -176,14 +176,17 @@ func requestSign(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	client, err := tip.NewClient(conf)
+	client, _, err := tip.NewClient(conf)
 	if err != nil {
 		return err
 	}
-	sig, err := client.Sign(c.String("id"))
+	sig, evicted, err := client.Sign(c.String("id"))
 	if err != nil {
 		return err
 	}
 	fmt.Println(hex.EncodeToString(sig))
+	for _, sp := range evicted {
+		fmt.Println(sp.Identity, sp.API)
+	}
 	return nil
 }
