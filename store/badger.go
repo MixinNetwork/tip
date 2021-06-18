@@ -26,7 +26,7 @@ type BadgerStorage struct {
 	db *badger.DB
 }
 
-func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint32, count bool) (int, error) {
+func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint32, increase bool) (int, error) {
 	now := uint64(time.Now().UnixNano())
 	if now >= maxUint64/2 || now <= uint64(window) {
 		panic(time.Now())
@@ -50,7 +50,7 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 			}
 			available--
 		}
-		if available == 0 || !count {
+		if available == 0 || !increase {
 			return nil
 		}
 

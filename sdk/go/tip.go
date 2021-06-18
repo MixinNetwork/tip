@@ -72,7 +72,7 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 	return cli, evicted, nil
 }
 
-func (c *Client) Sign(ks, ns string, nonce int64) ([]byte, []*signerPair, error) {
+func (c *Client) Sign(ks, ns string, nonce, grace int64) ([]byte, []*signerPair, error) {
 	key, err := crypto.PrivateKeyFromHex(ks)
 	if err != nil {
 		return nil, nil, err
@@ -95,12 +95,15 @@ func (c *Client) Sign(ks, ns string, nonce int64) ([]byte, []*signerPair, error)
 		buf := make([]byte, 8)
 		binary.BigEndian.PutUint64(buf, uint64(nonce))
 		msg = append(msg, buf...)
+		binary.BigEndian.PutUint64(buf, uint64(grace))
+		msg = append(msg, buf...)
 		scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
 		sig, _ := scheme.Sign(key, msg)
 		b, _ := json.Marshal(map[string]interface{}{
 			"identity":  crypto.PublicKeyString(pkey),
 			"ephemeral": hex.EncodeToString(sum[:]),
 			"nonce":     nonce,
+			"grace":     grace,
 		})
 		spub, err := crypto.PubKeyFromBase58(s.Identity)
 		if err != nil {

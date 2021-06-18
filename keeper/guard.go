@@ -20,7 +20,7 @@ import (
 const (
 	EphemeralGracePeriod = time.Hour * 24 * 128
 	LimitWindow          = time.Hour * 24 * 7
-	LimitQuota           = 5
+	LimitQuota           = 7
 )
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (int, error) {
@@ -37,6 +37,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	var body struct {
 		Identity  string `json:"identity"`
 		Ephemeral string `json:"ephemeral"`
+		Grace     int64  `json:"grace"`
 		Nonce     int64  `json:"nonce"`
 	}
 	err = json.Unmarshal(b, &body)
@@ -59,7 +60,11 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		panic(err)
 	}
 
-	valid, err = store.CheckEphemeralNonce(key, eb.Bytes(), uint64(body.Nonce), EphemeralGracePeriod)
+	nonce, grace := uint64(body.Nonce), time.Duration(body.Grace)
+	if grace < EphemeralGracePeriod {
+		grace = EphemeralGracePeriod
+	}
+	valid, err = store.CheckEphemeralNonce(key, eb.Bytes(), nonce, grace)
 	if err != nil {
 		return 0, err
 	} else if !valid {
@@ -75,7 +80,9 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 
 	msg := append(key, eb.Bytes()...)
 	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, uint64(body.Nonce))
+	binary.BigEndian.PutUint64(buf, nonce)
+	msg = append(msg, buf...)
+	binary.BigEndian.PutUint64(buf, uint64(grace))
 	msg = append(msg, buf...)
 	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
 	err = scheme.Verify(pub, msg, sig)
@@ -83,5 +90,6 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return available, nil
 	}
 
-	return store.CheckLimit(key, LimitWindow, LimitQuota, true)
+	_, err = store.CheckLimit(key, LimitWindow, LimitQuota, true)
+	return 0, err
 }

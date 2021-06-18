@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/config"
@@ -184,7 +185,8 @@ func requestSign(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	sig, evicted, err := client.Sign(c.String("key"), c.String("ephemeral"), c.Int64("nonce"))
+	grace := int64(time.Hour * 24 * 128)
+	sig, evicted, err := client.Sign(c.String("key"), c.String("ephemeral"), c.Int64("nonce"), grace)
 	if err != nil {
 		return err
 	}
