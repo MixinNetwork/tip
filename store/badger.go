@@ -1,7 +1,10 @@
 package store
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 )
@@ -9,6 +12,10 @@ import (
 const (
 	badgerKeyPolyPublic = "POLY#PUBLIC"
 	badgerKeyPolyShare  = "POLY#SHARE"
+
+	badgerKeyPrefixLimit = "LIMIT#"
+	badgerKeyPrefixNonce = "NONCE#"
+	maxUint64            = ^uint64(0)
 )
 
 type BadgerConfiguration struct {
@@ -17,6 +24,72 @@ type BadgerConfiguration struct {
 
 type BadgerStorage struct {
 	db *badger.DB
+}
+
+func (bs *BadgerStorage) CheckLimit(key []byte, duration time.Duration, limit uint32) (int, error) {
+	now := uint64(time.Now().UnixNano())
+	if now >= maxUint64/2 || now <= uint64(duration) {
+		panic(time.Now())
+	}
+	now = maxUint64 - now
+	threshold := now + uint64(duration)
+	available := limit
+
+	prefix := append([]byte(badgerKeyPrefixLimit), key...)
+	err := bs.db.Update(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		opts.Prefix = prefix
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Seek(prefix); available > 0 && it.ValidForPrefix(prefix); it.Next() {
+			ts := it.Item().Key()[len(prefix):]
+			if binary.BigEndian.Uint64(ts) > threshold {
+				break
+			}
+			available--
+		}
+		if available == 0 {
+			return nil
+		}
+
+		var buf [8]byte
+		binary.BigEndian.PutUint64(buf[:], now)
+		return txn.Set(append(prefix, buf[:]...), []byte{1})
+	})
+	return int(available), err
+}
+
+func (bs *BadgerStorage) CheckNonce(key, nonce []byte, duration time.Duration) (bool, error) {
+	var valid bool
+	buf, now := make([]byte, 8), time.Now().UnixNano()
+	binary.BigEndian.PutUint64(buf, uint64(now))
+	val := append(buf, nonce...)
+	err := bs.db.Update(func(txn *badger.Txn) error {
+		key = append([]byte(badgerKeyPrefixNonce), key...)
+		item, err := txn.Get(key)
+		if err == badger.ErrKeyNotFound {
+			valid = true
+			return txn.Set(key, val)
+		} else if err != nil {
+			return err
+		}
+		v, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+		old := binary.BigEndian.Uint64(v[:8])
+		if old+uint64(duration) < uint64(now) {
+			valid = true
+			return txn.Set(key, val)
+		}
+		if bytes.Compare(v[8:], nonce) != 0 {
+			return nil
+		}
+		return txn.Set(key, val)
+	})
+	return valid, err
 }
 
 func (bs *BadgerStorage) ReadPolyShare() ([]byte, error) {
