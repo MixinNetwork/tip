@@ -6,14 +6,14 @@ import (
 	"github.com/MixinNetwork/tip/signer"
 )
 
-type signerConf struct {
+type signerPair struct {
 	Identity string `json:"identity"`
 	API      string `json:"api"`
 }
 
 type Configuration struct {
 	Commitments []string      `json:"commitments"`
-	Signers     []*signerConf `json:"signers"`
+	Signers     []*signerPair `json:"signers"`
 }
 
 func LoadConfigurationJSON(data string) (*Configuration, error) {

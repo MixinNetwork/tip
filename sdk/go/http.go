@@ -2,10 +2,15 @@ package tip
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/MixinNetwork/tip/signer"
+	"github.com/drand/kyber/pairing/bn256"
+	"github.com/drand/kyber/sign/bls"
 )
 
 var httpClient *http.Client
@@ -15,13 +20,13 @@ func init() {
 }
 
 type ResponseData struct {
-	Commitments []string `json:"commitments"`
-	Identity    string   `json:"identity"`
+	Commitments []string `json:"commitments,omitempty"`
+	Identity    string   `json:"identity,omitempty"`
 	Signers     []struct {
 		Identity string `json:"identity"`
 		Index    int    `json:"index"`
-	} `json:"signers"`
-	Signature string `json:"signature"`
+	} `json:"signers,omitempty"`
+	Partial string `json:"partial,omitempty"`
 }
 
 type Response struct {
@@ -29,11 +34,12 @@ type Response struct {
 		Code        int    `json:"code"`
 		Description string `json:"description"`
 	} `json:"error"`
-	Data *ResponseData `json:"data"`
+	Data      *ResponseData `json:"data"`
+	Signature string        `json:"signature"`
 }
 
-func request(api, method string, data []byte) (*ResponseData, error) {
-	req, err := http.NewRequest(method, api, bytes.NewReader(data))
+func request(sp *signerPair, method string, data []byte) (*ResponseData, error) {
+	req, err := http.NewRequest(method, sp.API, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -56,5 +62,24 @@ func request(api, method string, data []byte) (*ResponseData, error) {
 	if body.Error != nil {
 		return nil, fmt.Errorf("error code %d", body.Error.Code)
 	}
+
+	sig, err := hex.DecodeString(body.Signature)
+	if err != nil {
+		return nil, err
+	}
+	pub, err := signer.PubKeyFromBase58(sp.Identity)
+	if err != nil {
+		return nil, err
+	}
+	data, err = json.Marshal(body.Data)
+	if err != nil {
+		return nil, err
+	}
+	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
+	err = scheme.Verify(pub, data, sig)
+	if err != nil {
+		return nil, err
+	}
+
 	return body.Data, nil
 }

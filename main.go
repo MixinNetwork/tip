@@ -103,7 +103,7 @@ func runNode(c *cli.Context) error {
 	go node.Run(ctx)
 
 	ac := conf.API
-	ac.Identity = node.GetIdentity()
+	ac.Key = node.GetKey()
 	ac.Signers = node.GetSigners()
 	ac.Poly = node.GetPoly()
 	ac.Share = node.GetShare()

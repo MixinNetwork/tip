@@ -14,11 +14,6 @@ import (
 	"github.com/unrolled/render"
 )
 
-type SignRequest struct {
-	Identity string `json:"identity"`
-	Nonce    string `json:"nonce"`
-}
-
 type Handler struct {
 	store  store.Storage
 	conf   *Configuration
@@ -26,11 +21,11 @@ type Handler struct {
 }
 
 type Configuration struct {
-	Identity kyber.Point    `toml:"-"`
-	Signers  []dkg.Node     `toml:"-"`
-	Poly     []kyber.Point  `toml:"-"`
-	Share    share.PriShare `toml:"-"`
-	Port     int            `toml:"port"`
+	Key     kyber.Scalar   `toml:"-"`
+	Signers []dkg.Node     `toml:"-"`
+	Poly    []kyber.Point  `toml:"-"`
+	Share   share.PriShare `toml:"-"`
+	Port    int            `toml:"port"`
 }
 
 func NewServer(store store.Storage, conf *Configuration) *http.Server {
@@ -73,7 +68,7 @@ func (hdr *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
 		hdr.httpError(w, http.StatusBadRequest)
 		return
 	}
-	data, err := sign(hdr.store, &body, &hdr.conf.Share)
+	data, sig, err := sign(hdr.conf.Key, hdr.store, &body, &hdr.conf.Share)
 	if err == ErrTooManyRequest {
 		hdr.httpError(w, http.StatusTooManyRequests)
 		return
@@ -81,12 +76,12 @@ func (hdr *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
 		hdr.httpError(w, http.StatusInternalServerError)
 		return
 	}
-	hdr.render.JSON(w, http.StatusOK, map[string]interface{}{"data": data})
+	hdr.render.JSON(w, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
 }
 
 func (hdr *Handler) handleInfo(w http.ResponseWriter, r *http.Request) {
-	data := info(hdr.conf.Identity, hdr.conf.Signers, hdr.conf.Poly)
-	hdr.render.JSON(w, http.StatusOK, map[string]interface{}{"data": data})
+	data, sig := info(hdr.conf.Key, hdr.conf.Signers, hdr.conf.Poly)
+	hdr.render.JSON(w, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
 }
 
 func (hdr *Handler) httpError(w http.ResponseWriter, code int) {

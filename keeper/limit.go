@@ -5,6 +5,6 @@ import (
 )
 
 // TODO
-func CheckLimit(store store.Storage, identity, nonce string) (int, error) {
+func Check(store store.Storage, identity, nonce, signature string) (int, error) {
 	return 1, nil
 }

@@ -14,7 +14,7 @@ import (
 
 type Client struct {
 	commitments []kyber.Point
-	signers     []*signerConf
+	signers     []*signerPair
 }
 
 func NewClient(conf *Configuration) (*Client, error) {
@@ -30,7 +30,7 @@ func NewClient(conf *Configuration) (*Client, error) {
 	}
 
 	for _, s := range conf.Signers {
-		res, err := request(s.API, "GET", nil)
+		res, err := request(s, "GET", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -64,11 +64,11 @@ func (c *Client) Sign(id string) ([]byte, error) {
 	})
 	var partials [][]byte
 	for _, s := range c.signers {
-		res, err := request(s.API, "POST", data)
+		res, err := request(s, "POST", data)
 		if err != nil {
 			return nil, err
 		}
-		par, err := hex.DecodeString(res.Signature)
+		par, err := hex.DecodeString(res.Partial)
 		if err != nil {
 			return nil, err
 		}

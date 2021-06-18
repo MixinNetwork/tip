@@ -89,8 +89,8 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 	return node
 }
 
-func (node *Node) GetIdentity() kyber.Point {
-	return node.identity
+func (node *Node) GetKey() kyber.Scalar {
+	return node.key
 }
 
 func (node *Node) GetSigners() []dkg.Node {
