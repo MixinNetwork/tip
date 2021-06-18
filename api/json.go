@@ -17,8 +17,9 @@ import (
 
 type SignRequest struct {
 	Identity  string `json:"identity"`
-	Nonce     string `json:"nonce"`
+	Ephemeral string `json:"ephemeral"`
 	Signature string `json:"signature"`
+	Nonce     int64  `json:"nonce"`
 }
 
 func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, string) {
@@ -46,7 +47,7 @@ func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, 
 }
 
 func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
-	available, err := keeper.Check(store, body.Identity, body.Nonce, body.Signature)
+	available, err := keeper.Check(store, body.Identity, body.Ephemeral, body.Signature, body.Nonce)
 	if err != nil {
 		return nil, "", err
 	}

@@ -26,14 +26,14 @@ type BadgerStorage struct {
 	db *badger.DB
 }
 
-func (bs *BadgerStorage) CheckLimit(key []byte, duration time.Duration, limit uint32) (int, error) {
+func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint32, count bool) (int, error) {
 	now := uint64(time.Now().UnixNano())
-	if now >= maxUint64/2 || now <= uint64(duration) {
+	if now >= maxUint64/2 || now <= uint64(window) {
 		panic(time.Now())
 	}
 	now = maxUint64 - now
-	threshold := now + uint64(duration)
-	available := limit
+	threshold := now + uint64(window)
+	available := quota
 
 	prefix := append([]byte(badgerKeyPrefixLimit), key...)
 	err := bs.db.Update(func(txn *badger.Txn) error {
@@ -50,7 +50,7 @@ func (bs *BadgerStorage) CheckLimit(key []byte, duration time.Duration, limit ui
 			}
 			available--
 		}
-		if available == 0 {
+		if available == 0 || !count {
 			return nil
 		}
 
@@ -61,11 +61,13 @@ func (bs *BadgerStorage) CheckLimit(key []byte, duration time.Duration, limit ui
 	return int(available), err
 }
 
-func (bs *BadgerStorage) CheckNonce(key, nonce []byte, duration time.Duration) (bool, error) {
+func (bs *BadgerStorage) CheckNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error) {
 	var valid bool
 	buf, now := make([]byte, 8), time.Now().UnixNano()
 	binary.BigEndian.PutUint64(buf, uint64(now))
-	val := append(buf, nonce...)
+	val := append(buf, ephemeral...)
+	binary.BigEndian.PutUint64(buf, nonce)
+	val = append(val, buf...)
 	err := bs.db.Update(func(txn *badger.Txn) error {
 		key = append([]byte(badgerKeyPrefixNonce), key...)
 		item, err := txn.Get(key)
@@ -80,13 +82,18 @@ func (bs *BadgerStorage) CheckNonce(key, nonce []byte, duration time.Duration) (
 			return err
 		}
 		old := binary.BigEndian.Uint64(v[:8])
-		if old+uint64(duration) < uint64(now) {
+		if old+uint64(grace) < uint64(now) {
 			valid = true
 			return txn.Set(key, val)
 		}
-		if bytes.Compare(v[8:], nonce) != 0 {
+		if bytes.Compare(v[8:len(v)-8], ephemeral) != 0 {
 			return nil
 		}
+		old = binary.BigEndian.Uint64(v[len(v)-8:])
+		if old >= nonce {
+			return nil
+		}
+		valid = true
 		return txn.Set(key, val)
 	})
 	return valid, err

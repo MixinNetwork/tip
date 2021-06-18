@@ -11,6 +11,7 @@ import (
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/sign/tbls"
+	"golang.org/x/crypto/sha3"
 )
 
 type Client struct {
@@ -69,14 +70,34 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 	return cli, evicted, nil
 }
 
-func (c *Client) Sign(id string) ([]byte, []*signerPair, error) {
-	data, _ := json.Marshal(map[string]string{
-		"identity": id,
-		"nonce":    "1024",
-	})
-	var evicted []*signerPair
+func (c *Client) Sign(ks, ns string, nonce int64) ([]byte, []*signerPair, error) {
+	key, err := signer.PrivateKeyFromHex(ks)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, err = signer.PrivateKeyFromHex(ns)
+	if err != nil {
+		return nil, nil, err
+	}
+	pkey := signer.PublicKey(key)
+
 	var partials [][]byte
+	var evicted []*signerPair
 	for _, s := range c.signers {
+		sum := sha3.Sum256(append([]byte(ns), s.Identity...))
+		msg, err := pkey.MarshalBinary()
+		if err != nil {
+			panic(err)
+		}
+		msg = append(msg, sum[:]...)
+		scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
+		sig, _ := scheme.Sign(key, msg)
+		data, _ := json.Marshal(map[string]interface{}{
+			"identity":  signer.PublicKeyString(pkey),
+			"ephemeral": hex.EncodeToString(sum[:]),
+			"signature": hex.EncodeToString(sig),
+			"nonce":     nonce,
+		})
 		res, err := request(s, "POST", data)
 		if err != nil {
 			evicted = append(evicted, s)
@@ -92,7 +113,7 @@ func (c *Client) Sign(id string) ([]byte, []*signerPair, error) {
 	if len(partials) < len(c.commitments) {
 		return nil, evicted, fmt.Errorf("not enought partials %d %d", len(partials), len(c.commitments))
 	}
-	suite := bn256.NewSuiteG2()
+	id, suite := signer.PublicKeyString(pkey), bn256.NewSuiteG2()
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	pub := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
 	sig, err := scheme.Recover(pub, []byte(id), partials, len(c.commitments), len(c.signers))

@@ -66,8 +66,16 @@ func main() {
 						Usage: "The signers configuration",
 					},
 					&cli.StringFlag{
-						Name:  "id",
-						Usage: "The idenity to sign",
+						Name:  "key",
+						Usage: "The identity key",
+					},
+					&cli.StringFlag{
+						Name:  "ephemeral",
+						Usage: "The ephemeral seed",
+					},
+					&cli.Int64Flag{
+						Name:  "nonce",
+						Usage: "The nonce",
 					},
 				},
 			},
@@ -180,7 +188,7 @@ func requestSign(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	sig, evicted, err := client.Sign(c.String("id"))
+	sig, evicted, err := client.Sign(c.String("key"), c.String("ephemeral"), c.Int64("nonce"))
 	if err != nil {
 		return err
 	}

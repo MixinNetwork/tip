@@ -7,6 +7,6 @@ type Storage interface {
 	ReadPolyShare() ([]byte, error)
 	WritePoly(public, share []byte) error
 
-	CheckLimit(key []byte, duration time.Duration, limit uint32) (int, error)
-	CheckNonce(key, nonce []byte, duration time.Duration) (bool, error)
+	CheckLimit(key []byte, window time.Duration, quota uint32, count bool) (int, error)
+	CheckNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error)
 }
