@@ -32,12 +32,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	}
 	b = crypto.Decrypt(pub, priv, b)
 
-	var body struct {
-		Identity  string `json:"identity"`
-		Ephemeral string `json:"ephemeral"`
-		Grace     int64  `json:"grace"`
-		Nonce     int64  `json:"nonce"`
-	}
+	var body body
 	err = json.Unmarshal(b, &body)
 	if err != nil {
 		return 0, fmt.Errorf("invalid data %s", string(b))
@@ -53,10 +48,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if err != nil {
 		return 0, fmt.Errorf("invalid signature %s", signature)
 	}
-	key, err := pub.MarshalBinary()
-	if err != nil {
-		panic(err)
-	}
+	key := crypto.PublicKeyBytes(pub)
 
 	nonce, grace := uint64(body.Nonce), time.Duration(body.Grace)
 	if grace < EphemeralGracePeriod {
@@ -76,17 +68,29 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return 0, nil
 	}
 
-	msg := append(key, eb.Bytes()...)
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, nonce)
-	msg = append(msg, buf...)
-	binary.BigEndian.PutUint64(buf, uint64(grace))
-	msg = append(msg, buf...)
-	err = crypto.Verify(pub, msg, sig)
+	err = checkSignature(pub, sig, eb, nonce, uint64(grace))
 	if err == nil {
 		return available, nil
 	}
 
 	_, err = store.CheckLimit(key, LimitWindow, LimitQuota, true)
 	return 0, err
+}
+
+func checkSignature(pub kyber.Point, sig []byte, eb *big.Int, nonce, grace uint64) error {
+	msg := crypto.PublicKeyBytes(pub)
+	msg = append(msg, eb.Bytes()...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, nonce)
+	msg = append(msg, buf...)
+	binary.BigEndian.PutUint64(buf, grace)
+	msg = append(msg, buf...)
+	return crypto.Verify(pub, msg, sig)
+}
+
+type body struct {
+	Identity  string `json:"identity"`
+	Ephemeral string `json:"ephemeral"`
+	Grace     int64  `json:"grace"`
+	Nonce     int64  `json:"nonce"`
 }

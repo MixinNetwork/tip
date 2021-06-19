@@ -102,10 +102,7 @@ func unmarshalCommitments(b []byte) []kyber.Point {
 func marshalCommitments(commits []kyber.Point) []byte {
 	var data []byte
 	for _, p := range commits {
-		b, err := p.MarshalBinary()
-		if err != nil {
-			panic(err)
-		}
+		b := crypto.PublicKeyBytes(p)
 		data = append(data, b...)
 	}
 	return data
@@ -114,10 +111,7 @@ func marshalCommitments(commits []kyber.Point) []byte {
 func (node *Node) getNonce(nonce uint64) []byte {
 	var data []byte
 	for _, s := range node.signers {
-		b, err := s.Public.MarshalBinary()
-		if err != nil {
-			panic(s)
-		}
+		b := crypto.PublicKeyBytes(s.Public)
 		data = append(data, b...)
 	}
 	var buf [8]byte

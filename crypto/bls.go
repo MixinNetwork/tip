@@ -40,11 +40,16 @@ func PublicKey(scalar kyber.Scalar) kyber.Point {
 }
 
 func PublicKeyString(point kyber.Point) string {
+	b := PublicKeyBytes(point)
+	return base58.CheckEncode(b, KeyVersion)
+}
+
+func PublicKeyBytes(point kyber.Point) []byte {
 	b, err := point.MarshalBinary()
 	if err != nil {
 		panic(err)
 	}
-	return base58.CheckEncode(b, KeyVersion)
+	return b
 }
 
 func PubKeyFromBytes(b []byte) (kyber.Point, error) {

@@ -71,48 +71,20 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 	return cli, evicted, nil
 }
 
-func (c *Client) Sign(ks, ns string, nonce, grace int64) ([]byte, []*signerPair, error) {
+func (c *Client) Sign(ks, ephemeral string, nonce, grace int64) ([]byte, []*signerPair, error) {
 	key, err := crypto.PrivateKeyFromHex(ks)
 	if err != nil {
 		return nil, nil, err
 	}
-	_, err = crypto.PrivateKeyFromHex(ns)
+	_, err = crypto.PrivateKeyFromHex(ephemeral)
 	if err != nil {
 		return nil, nil, err
 	}
-	pkey := crypto.PublicKey(key)
 
 	var partials [][]byte
 	var evicted []*signerPair
 	for _, s := range c.signers {
-		sum := sha3.Sum256(append([]byte(ns), s.Identity...))
-		msg, err := pkey.MarshalBinary()
-		if err != nil {
-			panic(err)
-		}
-		msg = append(msg, sum[:]...)
-		buf := make([]byte, 8)
-		binary.BigEndian.PutUint64(buf, uint64(nonce))
-		msg = append(msg, buf...)
-		binary.BigEndian.PutUint64(buf, uint64(grace))
-		msg = append(msg, buf...)
-		sig, _ := crypto.Sign(key, msg)
-		b, _ := json.Marshal(map[string]interface{}{
-			"identity":  crypto.PublicKeyString(pkey),
-			"ephemeral": hex.EncodeToString(sum[:]),
-			"nonce":     nonce,
-			"grace":     grace,
-		})
-		spub, err := crypto.PubKeyFromBase58(s.Identity)
-		if err != nil {
-			panic(err)
-		}
-		cipher := crypto.Encrypt(spub, key, b)
-		data, _ := json.Marshal(map[string]interface{}{
-			"identity":  crypto.PublicKeyString(pkey),
-			"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),
-			"signature": hex.EncodeToString(sig),
-		})
+		data := sign(key, s.Identity, ephemeral, uint64(nonce), uint64(grace))
 		res, err := request(s, "POST", data)
 		if err != nil {
 			evicted = append(evicted, s)
@@ -128,7 +100,8 @@ func (c *Client) Sign(ks, ns string, nonce, grace int64) ([]byte, []*signerPair,
 	if len(partials) < len(c.commitments) {
 		return nil, evicted, fmt.Errorf("not enought partials %d %d", len(partials), len(c.commitments))
 	}
-	id, suite := crypto.PublicKeyString(pkey), bn256.NewSuiteG2()
+	suite := bn256.NewSuiteG2()
+	id := crypto.PublicKeyString(crypto.PublicKey(key))
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	poly := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
 	sig, err := scheme.Recover(poly, []byte(id), partials, len(c.commitments), len(c.signers))
@@ -140,4 +113,34 @@ func (c *Client) Sign(ks, ns string, nonce, grace int64) ([]byte, []*signerPair,
 		return nil, evicted, err
 	}
 	return sig, evicted, nil
+}
+
+func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64) []byte {
+	pkey := crypto.PublicKey(key)
+	sum := sha3.Sum256(append([]byte(ephemeral), nodeId...))
+	msg := crypto.PublicKeyBytes(pkey)
+	msg = append(msg, sum[:]...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, nonce)
+	msg = append(msg, buf...)
+	binary.BigEndian.PutUint64(buf, grace)
+	msg = append(msg, buf...)
+	sig, _ := crypto.Sign(key, msg)
+	b, _ := json.Marshal(map[string]interface{}{
+		"identity":  crypto.PublicKeyString(pkey),
+		"ephemeral": hex.EncodeToString(sum[:]),
+		"nonce":     nonce,
+		"grace":     grace,
+	})
+	spub, err := crypto.PubKeyFromBase58(nodeId)
+	if err != nil {
+		panic(err)
+	}
+	cipher := crypto.Encrypt(spub, key, b)
+	data, _ := json.Marshal(map[string]interface{}{
+		"identity":  crypto.PublicKeyString(pkey),
+		"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),
+		"signature": hex.EncodeToString(sig),
+	})
+	return data
 }

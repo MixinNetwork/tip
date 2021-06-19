@@ -146,10 +146,7 @@ func encodeDealBundle(db *dkg.DealBundle) []byte {
 
 	enc.WriteInt(len(db.Public))
 	for _, p := range db.Public {
-		b, err := p.MarshalBinary()
-		if err != nil {
-			panic(p)
-		}
+		b := crypto.PublicKeyBytes(p)
 		enc.WriteFixedBytes(b)
 	}
 

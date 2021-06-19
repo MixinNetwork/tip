@@ -15,11 +15,8 @@ import (
 func DH(point kyber.Point, scalar kyber.Scalar) []byte {
 	suite := bn256.NewSuiteG2()
 	point = suite.Point().Mul(scalar, point)
-	b, err := point.MarshalBinary()
-	if err != nil {
-		panic(err)
-	}
 
+	b := PublicKeyBytes(point)
 	sum := sha3.Sum256(b)
 	return sum[:]
 }
