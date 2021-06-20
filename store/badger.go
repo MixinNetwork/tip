@@ -13,10 +13,9 @@ const (
 	badgerKeyPolyPublic = "POLY#PUBLIC"
 	badgerKeyPolyShare  = "POLY#SHARE"
 
-	badgerKeyPrefixLimit  = "LIMIT#"
-	badgerKeyPrefixNonce  = "NONCE#"
-	badgerKeyPrefixSecret = "SECRET#"
-	maxUint64             = ^uint64(0)
+	badgerKeyPrefixLimit = "LIMIT#"
+	badgerKeyPrefixNonce = "NONCE#"
+	maxUint64            = ^uint64(0)
 )
 
 type BadgerConfiguration struct {
@@ -60,29 +59,6 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 		return txn.Set(append(prefix, buf[:]...), []byte{1})
 	})
 	return int(available), err
-}
-
-func (bs *BadgerStorage) CheckSecret(key, secret []byte) (bool, error) {
-	var valid bool
-	key = append([]byte(badgerKeyPrefixSecret), key...)
-	err := bs.db.Update(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err == badger.ErrKeyNotFound {
-			valid = true
-			return txn.Set(key, secret)
-		} else if err != nil {
-			return err
-		}
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		if bytes.Compare(v, secret) == 0 {
-			valid = true
-		}
-		return nil
-	})
-	return valid, err
 }
 
 func (bs *BadgerStorage) CheckEphemeralNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error) {

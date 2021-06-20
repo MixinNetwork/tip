@@ -17,8 +17,10 @@ import (
 
 const (
 	EphemeralGracePeriod = time.Hour * 24 * 128
-	LimitWindow          = time.Hour * 24 * 7
-	LimitQuota           = 7
+	EphemeralLimitWindow = time.Hour * 24
+	EphemeralLimitQuota  = 42
+	SecretLimitWindow    = time.Hour * 24 * 7
+	SecretLimitQuota     = 7
 )
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (int, error) {
@@ -40,10 +42,6 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if body.Identity != identity {
 		return 0, fmt.Errorf("invalid idenity %s", identity)
 	}
-	sb, valid := new(big.Int).SetString(body.Secret, 16)
-	if !valid {
-		return 0, fmt.Errorf("invalid secret %s", body.Secret)
-	}
 	eb, valid := new(big.Int).SetString(body.Ephemeral, 16)
 	if !valid {
 		return 0, fmt.Errorf("invalid ephemeral %s", body.Ephemeral)
@@ -54,37 +52,39 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	}
 	key := crypto.PublicKeyBytes(pub)
 
-	valid, err = store.CheckSecret(key, sb.Bytes())
-	if err != nil || !valid {
+	lkey := append(key, "EPHEMERAL"...)
+	available, err := store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
+	if err != nil || available < 1 {
 		return 0, err
 	}
-
 	nonce, grace := uint64(body.Nonce), time.Duration(body.Grace)
 	if grace < EphemeralGracePeriod {
 		grace = EphemeralGracePeriod
 	}
 	valid, err = store.CheckEphemeralNonce(key, eb.Bytes(), nonce, grace)
-	if err != nil || !valid {
+	if err != nil {
+		return 0, err
+	}
+	if !valid {
+		_, err = store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, true)
 		return 0, err
 	}
 
-	available, err := store.CheckLimit(key, LimitWindow, LimitQuota, false)
+	lkey = append(key, "SECRET"...)
+	available, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, false)
 	if err != nil || available < 1 {
 		return 0, err
 	}
-
-	err = checkSignature(pub, sig, sb, eb, nonce, uint64(grace))
+	err = checkSignature(pub, sig, eb, nonce, uint64(grace))
 	if err == nil {
 		return available, nil
 	}
-
-	_, err = store.CheckLimit(key, LimitWindow, LimitQuota, true)
+	_, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
 	return 0, err
 }
 
-func checkSignature(pub kyber.Point, sig []byte, sb, eb *big.Int, nonce, grace uint64) error {
+func checkSignature(pub kyber.Point, sig []byte, eb *big.Int, nonce, grace uint64) error {
 	msg := crypto.PublicKeyBytes(pub)
-	msg = append(msg, sb.Bytes()...)
 	msg = append(msg, eb.Bytes()...)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
@@ -96,7 +96,6 @@ func checkSignature(pub kyber.Point, sig []byte, sb, eb *big.Int, nonce, grace u
 
 type body struct {
 	Identity  string `json:"identity"`
-	Secret    string `json:"secret"`
 	Ephemeral string `json:"ephemeral"`
 	Grace     int64  `json:"grace"`
 	Nonce     int64  `json:"nonce"`
