@@ -80,10 +80,7 @@ func unmarshalPrivShare(b []byte) share.PriShare {
 func marshalPrivShare(ps *share.PriShare) []byte {
 	var buf [4]byte
 	binary.BigEndian.PutUint32(buf[:], uint32(ps.I))
-	b, err := ps.V.MarshalBinary()
-	if err != nil {
-		panic(err)
-	}
+	b := crypto.PrivateKeyBytes(ps.V)
 	return append(buf[:], b...)
 }
 

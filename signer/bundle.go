@@ -17,10 +17,7 @@ func encodeJustificationBundle(jb *dkg.JustificationBundle) []byte {
 	enc.WriteInt(len(jb.Justifications))
 	for _, j := range jb.Justifications {
 		enc.WriteUint32(j.ShareIndex)
-		b, err := j.Share.MarshalBinary()
-		if err != nil {
-			panic(err)
-		}
+		b := crypto.PrivateKeyBytes(j.Share)
 		enc.WriteFixedBytes(b)
 	}
 

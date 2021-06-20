@@ -40,6 +40,10 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if body.Identity != identity {
 		return 0, fmt.Errorf("invalid idenity %s", identity)
 	}
+	sb, valid := new(big.Int).SetString(body.Secret, 16)
+	if !valid {
+		return 0, fmt.Errorf("invalid secret %s", body.Secret)
+	}
 	eb, valid := new(big.Int).SetString(body.Ephemeral, 16)
 	if !valid {
 		return 0, fmt.Errorf("invalid ephemeral %s", body.Ephemeral)
@@ -50,25 +54,26 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	}
 	key := crypto.PublicKeyBytes(pub)
 
+	valid, err = store.CheckSecret(key, sb.Bytes())
+	if err != nil || !valid {
+		return 0, err
+	}
+
 	nonce, grace := uint64(body.Nonce), time.Duration(body.Grace)
 	if grace < EphemeralGracePeriod {
 		grace = EphemeralGracePeriod
 	}
 	valid, err = store.CheckEphemeralNonce(key, eb.Bytes(), nonce, grace)
-	if err != nil {
+	if err != nil || !valid {
 		return 0, err
-	} else if !valid {
-		return 0, nil
 	}
 
 	available, err := store.CheckLimit(key, LimitWindow, LimitQuota, false)
-	if err != nil {
+	if err != nil || available < 1 {
 		return 0, err
-	} else if available < 1 {
-		return 0, nil
 	}
 
-	err = checkSignature(pub, sig, eb, nonce, uint64(grace))
+	err = checkSignature(pub, sig, sb, eb, nonce, uint64(grace))
 	if err == nil {
 		return available, nil
 	}
@@ -77,8 +82,9 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	return 0, err
 }
 
-func checkSignature(pub kyber.Point, sig []byte, eb *big.Int, nonce, grace uint64) error {
+func checkSignature(pub kyber.Point, sig []byte, sb, eb *big.Int, nonce, grace uint64) error {
 	msg := crypto.PublicKeyBytes(pub)
+	msg = append(msg, sb.Bytes()...)
 	msg = append(msg, eb.Bytes()...)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
@@ -90,6 +96,7 @@ func checkSignature(pub kyber.Point, sig []byte, eb *big.Int, nonce, grace uint6
 
 type body struct {
 	Identity  string `json:"identity"`
+	Secret    string `json:"secret"`
 	Ephemeral string `json:"ephemeral"`
 	Grace     int64  `json:"grace"`
 	Nonce     int64  `json:"nonce"`

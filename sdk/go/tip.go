@@ -117,9 +117,11 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64) ([]byte, []*sign
 
 func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64) []byte {
 	pkey := crypto.PublicKey(key)
-	sum := sha3.Sum256(append([]byte(ephemeral), nodeId...))
+	ssum := sha3.Sum256(append(crypto.PrivateKeyBytes(key), nodeId...))
+	esum := sha3.Sum256(append([]byte(ephemeral), nodeId...))
 	msg := crypto.PublicKeyBytes(pkey)
-	msg = append(msg, sum[:]...)
+	msg = append(msg, ssum[:]...)
+	msg = append(msg, esum[:]...)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
 	msg = append(msg, buf...)
@@ -128,7 +130,8 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64) []byt
 	sig, _ := crypto.Sign(key, msg)
 	b, _ := json.Marshal(map[string]interface{}{
 		"identity":  crypto.PublicKeyString(pkey),
-		"ephemeral": hex.EncodeToString(sum[:]),
+		"secret":    hex.EncodeToString(ssum[:]),
+		"ephemeral": hex.EncodeToString(esum[:]),
 		"nonce":     nonce,
 		"grace":     grace,
 	})

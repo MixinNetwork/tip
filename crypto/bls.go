@@ -34,6 +34,14 @@ func PrivateKeyFromHex(s string) (kyber.Scalar, error) {
 	return scalar, nil
 }
 
+func PrivateKeyBytes(scalar kyber.Scalar) []byte {
+	b, err := scalar.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 func PublicKey(scalar kyber.Scalar) kyber.Point {
 	suite := bn256.NewSuiteG2()
 	return suite.Point().Mul(scalar, nil)
