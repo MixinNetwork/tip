@@ -70,11 +70,11 @@ func (node *Node) runDKG(ctx context.Context, nonce uint64) ([]byte, []byte, err
 	return pub, priv, nil
 }
 
-func unmarshalPrivShare(b []byte) *share.PriShare {
+func unmarshalPrivShare(b []byte) share.PriShare {
 	var ps share.PriShare
 	ps.V = mod.NewInt64(0, bn256.Order).SetBytes(b[4:])
 	ps.I = int(binary.BigEndian.Uint32(b[:4]))
-	return &ps
+	return ps
 }
 
 func marshalPrivShare(ps *share.PriShare) []byte {

@@ -34,7 +34,7 @@ type Node struct {
 	signers  []dkg.Node
 	period   time.Duration
 
-	share *share.PriShare
+	share share.PriShare
 	poly  []kyber.Point
 }
 
@@ -99,7 +99,7 @@ func (node *Node) GetSigners() []dkg.Node {
 }
 
 func (node *Node) GetShare() share.PriShare {
-	return *node.share
+	return node.share
 }
 
 func (node *Node) GetPoly() []kyber.Point {
