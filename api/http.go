@@ -49,7 +49,7 @@ func (hdr *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer handlePanic(w, r)
 
 	if r.URL.Path != "/" {
-		hdr.httpError(w, http.StatusNotFound)
+		hdr.error(w, r, http.StatusNotFound)
 		return
 	}
 
@@ -65,30 +65,36 @@ func (hdr *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
 	var body SignRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		hdr.httpError(w, http.StatusBadRequest)
+		hdr.error(w, r, http.StatusBadRequest)
 		return
 	}
 	data, sig, err := sign(hdr.conf.Key, hdr.store, &body, &hdr.conf.Share)
 	if err == ErrTooManyRequest {
-		hdr.httpError(w, http.StatusTooManyRequests)
+		hdr.error(w, r, http.StatusTooManyRequests)
 		return
 	} else if err != nil {
-		hdr.httpError(w, http.StatusInternalServerError)
+		hdr.error(w, r, http.StatusInternalServerError)
 		return
 	}
-	hdr.render.JSON(w, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
+	hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
 }
 
 func (hdr *Handler) handleInfo(w http.ResponseWriter, r *http.Request) {
 	data, sig := info(hdr.conf.Key, hdr.conf.Signers, hdr.conf.Poly)
-	hdr.render.JSON(w, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
+	hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
 }
 
-func (hdr *Handler) httpError(w http.ResponseWriter, code int) {
-	hdr.render.JSON(w, code, map[string]interface{}{"error": map[string]interface{}{
+func (hdr *Handler) error(w http.ResponseWriter, r *http.Request, code int) {
+	hdr.json(w, r, code, map[string]interface{}{"error": map[string]interface{}{
 		"code":        code,
 		"description": http.StatusText(code),
 	}})
+}
+
+func (hdr *Handler) json(w http.ResponseWriter, r *http.Request, code int, data interface{}) {
+	id := r.Header.Get("X-Request-ID")
+	logger.Info(r.Method, r.URL, id, code, data)
+	hdr.render.JSON(w, code, data)
 }
 
 func handleCORS(handler http.Handler) http.Handler {
@@ -99,7 +105,7 @@ func handleCORS(handler http.Handler) http.Handler {
 			return
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Add("Access-Control-Allow-Headers", "Content-Type,Authorization,Mixin-Conversation-ID")
+		w.Header().Add("Access-Control-Allow-Headers", "Content-Type,X-Request-ID")
 		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS,GET,POST,DELETE")
 		w.Header().Set("Access-Control-Max-Age", "600")
 		if r.Method == "OPTIONS" {
