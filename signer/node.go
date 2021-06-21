@@ -26,6 +26,7 @@ type Node struct {
 	messenger messenger.Messenger
 
 	setupActions map[string]*SetupBundle
+	dkgStarted   bool
 	board        *Board
 
 	key      kyber.Scalar
@@ -127,11 +128,15 @@ func (node *Node) Run(ctx context.Context) error {
 			err = node.handleSetupMessage(ctx, msg)
 			logger.Verbose("SETUP", err)
 		case MessageActionDKGDeal:
-			db, err := decodeDealBundle(msg.Data)
-			logger.Verbose("DEAL", err)
-			if err == nil && node.board != nil {
-				node.board.deals <- *db
+			nonce, db, err := decodeDealBundle(msg.Data)
+			logger.Verbose("DEAL", nonce, err)
+			if err != nil {
+				continue
 			}
+			if !node.dkgStarted {
+				node.setup(ctx, nonce)
+			}
+			node.board.deals <- *db
 		case MessageActionDKGResponse:
 			rb, err := decodeResponseBundle(msg.Data)
 			logger.Verbose("RESPONSE", err)

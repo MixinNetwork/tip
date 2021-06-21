@@ -11,6 +11,7 @@ import (
 
 type Board struct {
 	messenger messenger.Messenger
+	nonce     uint64
 	deals     chan dkg.DealBundle
 	resps     chan dkg.ResponseBundle
 	justs     chan dkg.JustificationBundle
@@ -18,10 +19,11 @@ type Board struct {
 	key       kyber.Scalar
 }
 
-func (node *Node) NewBoard(ctx context.Context) *Board {
+func (node *Node) NewBoard(ctx context.Context, nonce uint64) *Board {
 	n := len(node.signers)
 	return &Board{
 		messenger: node.messenger,
+		nonce:     nonce,
 		deals:     make(chan dkg.DealBundle, n),
 		resps:     make(chan dkg.ResponseBundle, n),
 		justs:     make(chan dkg.JustificationBundle, n),
@@ -31,7 +33,7 @@ func (node *Node) NewBoard(ctx context.Context) *Board {
 }
 
 func (t *Board) PushDeals(db *dkg.DealBundle) {
-	data := encodeDealBundle(db)
+	data := encodeDealBundle(db, t.nonce)
 	msg := makeMessage(t.key, MessageActionDKGDeal, data)
 	err := t.messenger.SendMessage(t.ctx, msg)
 	logger.Verbose("PushDeals", len(msg), err)

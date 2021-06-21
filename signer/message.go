@@ -86,7 +86,7 @@ func (node *Node) handleSetupMessage(ctx context.Context, msg *Message) error {
 	}
 	node.setupActions[msg.Sender] = sb
 	if len(node.setupActions) >= node.Threshold() {
-		go node.Setup(ctx, sb.Nonce)
+		node.setup(ctx, sb.Nonce)
 	}
 	return nil
 }

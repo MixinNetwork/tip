@@ -131,8 +131,10 @@ func decodeResponseBundle(b []byte) (*dkg.ResponseBundle, error) {
 	return rb, nil
 }
 
-func encodeDealBundle(db *dkg.DealBundle) []byte {
+func encodeDealBundle(db *dkg.DealBundle, nonce uint64) []byte {
 	enc := NewEncoder()
+	enc.WriteUint64(nonce)
+
 	enc.WriteUint32(db.DealerIndex)
 
 	enc.WriteInt(len(db.Deals))
@@ -153,28 +155,33 @@ func encodeDealBundle(db *dkg.DealBundle) []byte {
 	return enc.buf.Bytes()
 }
 
-func decodeDealBundle(b []byte) (*dkg.DealBundle, error) {
+func decodeDealBundle(b []byte) (uint64, *dkg.DealBundle, error) {
 	db := &dkg.DealBundle{}
 	dec := NewDecoder(b)
 
+	nonce, err := dec.ReadUint64()
+	if err != nil {
+		return 0, nil, err
+	}
+
 	di, err := dec.ReadUint32()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	db.DealerIndex = di
 
 	dl, err := dec.ReadInt()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	for ; dl > 0; dl-- {
 		si, err := dec.ReadUint32()
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		es, err := dec.ReadBytes()
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		db.Deals = append(db.Deals, dkg.Deal{
 			ShareIndex:     si,
@@ -184,32 +191,32 @@ func decodeDealBundle(b []byte) (*dkg.DealBundle, error) {
 
 	pl, err := dec.ReadInt()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	for ; pl > 0; pl-- {
 		pb, err := dec.ReadBytes()
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		point, err := crypto.PubKeyFromBytes(pb)
 		if err != nil {
-			return nil, err
+			return 0, nil, err
 		}
 		db.Public = append(db.Public, point)
 	}
 
 	sid, err := dec.ReadBytes()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	db.SessionID = sid
 	sig, err := dec.ReadBytes()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	db.Signature = sig
 
-	return db, nil
+	return nonce, db, nil
 }
 
 type Decoder struct {

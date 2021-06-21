@@ -17,7 +17,12 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func (node *Node) Setup(ctx context.Context, nonce uint64) error {
+func (node *Node) setup(ctx context.Context, nonce uint64) error {
+	if node.dkgStarted {
+		return nil
+	}
+	node.dkgStarted = true
+
 	priv, err := node.store.ReadPolyShare()
 	if err != nil || priv != nil {
 		return err
@@ -27,15 +32,6 @@ func (node *Node) Setup(ctx context.Context, nonce uint64) error {
 		return err
 	}
 
-	pub, priv, err = node.runDKG(ctx, nonce)
-	logger.Verbose("runDKG", pub, priv, err)
-	if err != nil {
-		return err
-	}
-	return node.store.WritePoly(pub, priv)
-}
-
-func (node *Node) runDKG(ctx context.Context, nonce uint64) ([]byte, []byte, error) {
 	suite := bn256.NewSuiteG2()
 	conf := &dkg.Config{
 		Suite:     suite,
@@ -47,16 +43,28 @@ func (node *Node) runDKG(ctx context.Context, nonce uint64) ([]byte, []byte, err
 		NewNodes:  node.signers,
 	}
 
-	node.board = node.NewBoard(ctx)
+	node.board = node.NewBoard(ctx, nonce)
 	phaser := dkg.NewTimePhaserFunc(func(dkg.Phase) {
 		time.Sleep(node.period)
 	})
 	protocol, err := dkg.NewProtocol(conf, node.board, phaser, false)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	resCh := protocol.WaitEnd()
 	go phaser.Start()
+	go func() error {
+		pub, priv, err = node.runDKG(ctx, protocol)
+		logger.Verbose("runDKG", pub, priv, err)
+		if err != nil {
+			return err
+		}
+		return node.store.WritePoly(pub, priv)
+	}()
+	return nil
+}
+
+func (node *Node) runDKG(ctx context.Context, protocol *dkg.Protocol) ([]byte, []byte, error) {
+	resCh := protocol.WaitEnd()
 	optRes := <-resCh
 	if optRes.Error != nil {
 		return nil, nil, optRes.Error
