@@ -3,6 +3,7 @@ package signer
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -54,7 +55,7 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 	go phaser.Start()
 	go func() error {
 		pub, priv, err = node.runDKG(ctx, protocol)
-		logger.Verbose("runDKG", pub, priv, err)
+		logger.Verbose("runDKG", hex.EncodeToString(pub), hex.EncodeToString(priv), err)
 		if err != nil {
 			return err
 		}

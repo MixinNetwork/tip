@@ -70,7 +70,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		_, err = store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, true)
 		return 0, err
 	}
-	if rb != nil && rb.Int64() > 0 {
+	if rb != nil && rb.Sign() > 0 {
 		err = store.RotateEphemeralNonce(key, rb.Bytes(), nonce)
 		if err != nil {
 			return 0, err
@@ -98,7 +98,7 @@ func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace u
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, grace)
 	msg = append(msg, buf...)
-	if rb != nil && rb.Int64() > 0 {
+	if rb != nil && rb.Sign() > 0 {
 		msg = append(msg, rb.Bytes()...)
 	}
 	return crypto.Verify(pub, msg, sig)
