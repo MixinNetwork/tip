@@ -1,6 +1,7 @@
 package tip
 
 import (
+	"crypto/aes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -96,12 +97,29 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 			evicted = append(evicted, s)
 			continue
 		}
-		par, err := hex.DecodeString(res.Partial)
+		enc, err := hex.DecodeString(res.Partial)
 		if err != nil {
 			evicted = append(evicted, s)
 			continue
 		}
-		partials = append(partials, par)
+		if len(enc)%aes.BlockSize != 0 {
+			evicted = append(evicted, s)
+			continue
+		}
+		pub, err := crypto.PubKeyFromBase58(s.Identity)
+		if err != nil {
+			panic(err)
+		}
+		dec := crypto.Decrypt(pub, key, enc)
+		if len(dec) != 66+8 {
+			evicted = append(evicted, s)
+			continue
+		}
+		if uint64(nonce) != binary.BigEndian.Uint64(dec[:8]) {
+			evicted = append(evicted, s)
+			continue
+		}
+		partials = append(partials, dec[8:])
 	}
 	if len(partials) < len(c.commitments) {
 		return nil, evicted, fmt.Errorf("not enought partials %d %d", len(partials), len(c.commitments))

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 
@@ -48,11 +49,18 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	if err != nil {
 		return nil, "", err
 	}
-	if available < 1 {
+	if available == nil || available.Available < 1 {
 		return nil, "", ErrTooManyRequest
 	}
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	partial, err := scheme.Sign(priv, []byte(body.Identity))
+	if err != nil {
+		panic(err)
+	}
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, available.Nonce)
+	partial = append(buf, partial...)
+	partial = crypto.Encrypt(available.Identity, key, partial)
 	data := map[string]interface{}{
 		"partial": hex.EncodeToString(partial),
 	}
