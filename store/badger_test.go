@@ -12,6 +12,7 @@ import (
 func TestBadgerLimit(t *testing.T) {
 	assert := assert.New(t)
 	bs := testBadgerStore()
+	defer bs.Close()
 
 	key := []byte("limit-check-test")
 	available, err := bs.CheckLimit(key, time.Second*3, 3, true)
@@ -43,6 +44,7 @@ func TestBadgerLimit(t *testing.T) {
 func TestBadgerNonce(t *testing.T) {
 	assert := assert.New(t)
 	bs := testBadgerStore()
+	defer bs.Close()
 
 	key := []byte("nonce-check-test-key")
 	nonce := []byte("nonce-check-test-value")
@@ -67,7 +69,7 @@ func TestBadgerNonce(t *testing.T) {
 	assert.True(res)
 }
 
-func testBadgerStore() Storage {
+func testBadgerStore() *BadgerStorage {
 	dir, err := os.MkdirTemp("/tmp", "tip-badger-test")
 	if err != nil {
 		panic(err)
