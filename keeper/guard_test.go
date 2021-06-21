@@ -36,31 +36,32 @@ func TestGuard(t *testing.T) {
 	grace := uint64(time.Hour * 24 * 128)
 	for i := uint64(0); i < 10; i++ {
 		signature, data := makeTestRequest(user, node, ephmr, nil, 1024+i, grace)
-		available, err := Guard(bs, signer, identity, signature, data)
-		assert.Equal(SecretLimitQuota, available)
+		res, err := Guard(bs, signer, identity, signature, data)
+		assert.Equal(SecretLimitQuota, res.Available)
+		assert.Equal(1024+i, res.Nonce)
 		assert.Nil(err)
 		key := crypto.PublicKeyBytes(crypto.PublicKey(user))
 		lkey := append(key, "EPHEMERAL"...)
-		available, err = bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
+		available, err := bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
 		assert.Equal(EphemeralLimitQuota, available)
 		assert.Nil(err)
 	}
 
 	// invalid nonce
 	signature, data := makeTestRequest(user, node, ephmr, nil, 1024, grace)
-	available, err := Guard(bs, signer, identity, signature, data)
-	assert.Equal(0, available)
+	res, err := Guard(bs, signer, identity, signature, data)
+	assert.Nil(res)
 	assert.Nil(err)
 	key := crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey := append(key, "EPHEMERAL"...)
-	available, err = bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
+	available, err := bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
 	assert.Equal(EphemeralLimitQuota-1, available)
 	assert.Nil(err)
 
 	// invalid encryption
 	signature, data = makeTestRequest(user, crypto.PublicKey(user), ephmr, nil, 1034, grace)
-	available, err = Guard(bs, signer, identity, signature, data)
-	assert.Equal(0, available)
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(res)
 	assert.Contains(err.Error(), "invalid data ")
 	key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey = append(key, "EPHEMERAL"...)
@@ -70,8 +71,8 @@ func TestGuard(t *testing.T) {
 
 	// invalid ephemeral
 	signature, data = makeTestRequest(user, node, crypto.PublicKeyBytes(node), nil, 1034, grace)
-	available, err = Guard(bs, signer, identity, signature, data)
-	assert.Equal(0, available)
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(res)
 	assert.Nil(err)
 	key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey = append(key, "EPHEMERAL"...)
@@ -82,12 +83,12 @@ func TestGuard(t *testing.T) {
 	// invalid signature
 	for i := 1; i < 6; i++ {
 		signature, data = makeTestRequest(user, node, ephmr, nil, uint64(1033+i), grace)
-		available, err = Guard(bs, signer, identity, hex.EncodeToString(ephmr), data)
-		assert.Equal(0, available)
+		res, err := Guard(bs, signer, identity, hex.EncodeToString(ephmr), data)
+		assert.Nil(res)
 		assert.Nil(err)
 		key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 		lkey = append(key, "EPHEMERAL"...)
-		available, err = bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
+		available, err := bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
 		assert.Equal(EphemeralLimitQuota-2, available)
 		assert.Nil(err)
 		lkey = append(key, "SECRET"...)
@@ -97,8 +98,9 @@ func TestGuard(t *testing.T) {
 	}
 
 	signature, data = makeTestRequest(user, node, ephmr, nil, 1039, grace)
-	available, err = Guard(bs, signer, identity, signature, data)
-	assert.Equal(SecretLimitQuota-5, available)
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Equal(SecretLimitQuota-5, res.Available)
+	assert.Equal(uint64(1039), res.Nonce)
 	assert.Nil(err)
 	key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey = append(key, "EPHEMERAL"...)

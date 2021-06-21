@@ -45,11 +45,11 @@ func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, 
 }
 
 func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
-	available, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
+	res, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
 	if err != nil {
 		return nil, "", err
 	}
-	if available == nil || available.Available < 1 {
+	if res == nil || res.Available < 1 {
 		return nil, "", ErrTooManyRequest
 	}
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
@@ -58,9 +58,9 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 		panic(err)
 	}
 	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, available.Nonce)
+	binary.BigEndian.PutUint64(buf, res.Nonce)
 	partial = append(buf, partial...)
-	partial = crypto.Encrypt(available.Identity, key, partial)
+	partial = crypto.Encrypt(res.Identity, key, partial)
 	data := map[string]interface{}{
 		"partial": hex.EncodeToString(partial),
 	}
