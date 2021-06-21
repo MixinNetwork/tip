@@ -71,7 +71,7 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 	return cli, evicted, nil
 }
 
-func (c *Client) Sign(ks, ephemeral string, nonce, grace int64) ([]byte, []*signerPair, error) {
+func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) ([]byte, []*signerPair, error) {
 	key, err := crypto.PrivateKeyFromHex(ks)
 	if err != nil {
 		return nil, nil, err
@@ -80,11 +80,17 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64) ([]byte, []*sign
 	if err != nil {
 		return nil, nil, err
 	}
+	if rotate != "" {
+		_, err = crypto.PrivateKeyFromHex(rotate)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 
 	var partials [][]byte
 	var evicted []*signerPair
 	for _, s := range c.signers {
-		data := sign(key, s.Identity, ephemeral, uint64(nonce), uint64(grace))
+		data := sign(key, s.Identity, ephemeral, uint64(nonce), uint64(grace), rotate)
 		res, err := request(s, "POST", data)
 		if err != nil {
 			evicted = append(evicted, s)
@@ -115,32 +121,38 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64) ([]byte, []*sign
 	return sig, evicted, nil
 }
 
-func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64) []byte {
+func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotate string) []byte {
 	pkey := crypto.PublicKey(key)
-	sum := sha3.Sum256(append([]byte(ephemeral), nodeId...))
+	esum := sha3.Sum256(append([]byte(ephemeral), nodeId...))
 	msg := crypto.PublicKeyBytes(pkey)
-	msg = append(msg, sum[:]...)
+	msg = append(msg, esum[:]...)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, grace)
 	msg = append(msg, buf...)
-	sig, _ := crypto.Sign(key, msg)
-	b, _ := json.Marshal(map[string]interface{}{
+	data := map[string]interface{}{
 		"identity":  crypto.PublicKeyString(pkey),
-		"ephemeral": hex.EncodeToString(sum[:]),
+		"ephemeral": hex.EncodeToString(esum[:]),
 		"nonce":     nonce,
 		"grace":     grace,
-	})
+	}
+	if rotate != "" {
+		rsum := sha3.Sum256(append([]byte(rotate), nodeId...))
+		msg = append(msg, rsum[:]...)
+		data["rotate"] = hex.EncodeToString(rsum[:])
+	}
+	b, _ := json.Marshal(data)
 	spub, err := crypto.PubKeyFromBase58(nodeId)
 	if err != nil {
 		panic(err)
 	}
 	cipher := crypto.Encrypt(spub, key, b)
-	data, _ := json.Marshal(map[string]interface{}{
+	sig, _ := crypto.Sign(key, msg)
+	b, _ = json.Marshal(map[string]interface{}{
 		"identity":  crypto.PublicKeyString(pkey),
 		"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),
 		"signature": hex.EncodeToString(sig),
 	})
-	return data
+	return b
 }

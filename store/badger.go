@@ -99,6 +99,18 @@ func (bs *BadgerStorage) CheckEphemeralNonce(key, ephemeral []byte, nonce uint64
 	return valid, err
 }
 
+func (bs *BadgerStorage) RotateEphemeralNonce(key, ephemeral []byte, nonce uint64) error {
+	buf, now := make([]byte, 8), time.Now().UnixNano()
+	binary.BigEndian.PutUint64(buf, uint64(now))
+	val := append(buf, ephemeral...)
+	binary.BigEndian.PutUint64(buf, nonce)
+	val = append(val, buf...)
+	key = append([]byte(badgerKeyPrefixNonce), key...)
+	return bs.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, val)
+	})
+}
+
 func (bs *BadgerStorage) ReadPolyShare() ([]byte, error) {
 	txn := bs.db.NewTransaction(false)
 	defer txn.Discard()

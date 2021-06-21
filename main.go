@@ -74,6 +74,10 @@ func main() {
 						Name:  "ephemeral",
 						Usage: "The ephemeral seed",
 					},
+					&cli.StringFlag{
+						Name:  "rotate",
+						Usage: "The ephemeral rotation",
+					},
 					&cli.Int64Flag{
 						Name:  "nonce",
 						Usage: "The nonce",
@@ -186,7 +190,8 @@ func requestSign(c *cli.Context) error {
 		return err
 	}
 	grace := int64(time.Hour * 24 * 128)
-	sig, evicted, err := client.Sign(c.String("key"), c.String("ephemeral"), c.Int64("nonce"), grace)
+	es, rs := c.String("ephemeral"), c.String("rotate")
+	sig, evicted, err := client.Sign(c.String("key"), es, c.Int64("nonce"), grace, rs)
 	if err != nil {
 		return err
 	}
