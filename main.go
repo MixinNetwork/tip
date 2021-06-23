@@ -37,9 +37,9 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:   "node",
+				Name:   "signer",
 				Usage:  "Run the signer node",
-				Action: runNode,
+				Action: runSigner,
 			},
 			{
 				Name:   "setup",
@@ -56,6 +56,11 @@ func main() {
 				Name:   "key",
 				Usage:  "Generate a key pair",
 				Action: genKey,
+			},
+			{
+				Name:   "api",
+				Usage:  "Run the api node",
+				Action: runAPI,
 			},
 			{
 				Name:   "sign",
@@ -93,8 +98,8 @@ func main() {
 	}
 }
 
-func runNode(c *cli.Context) error {
-	ctx := context.Background()
+func runSigner(c *cli.Context) error {
+	ctx, cancel := context.WithCancel(context.Background())
 
 	cp := c.String("config")
 	conf, err := config.ReadConfiguration(cp)
@@ -112,8 +117,26 @@ func runNode(c *cli.Context) error {
 		panic(err)
 	}
 
-	node := signer.NewNode(ctx, store, messenger, conf.Node)
-	go node.Run(ctx)
+	node := signer.NewNode(ctx, cancel, store, messenger, conf.Node)
+	return node.Run(ctx)
+
+}
+
+func runAPI(c *cli.Context) error {
+	ctx := context.Background()
+
+	cp := c.String("config")
+	conf, err := config.ReadConfiguration(cp)
+	if err != nil {
+		return err
+	}
+
+	store, err := store.OpenBadger(ctx, conf.Store)
+	if err != nil {
+		return err
+	}
+
+	node := signer.NewNode(ctx, nil, store, nil, conf.Node)
 
 	ac := conf.API
 	ac.Key = node.GetKey()

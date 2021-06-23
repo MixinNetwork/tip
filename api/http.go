@@ -21,11 +21,11 @@ type Handler struct {
 }
 
 type Configuration struct {
-	Key     kyber.Scalar   `toml:"-"`
-	Signers []dkg.Node     `toml:"-"`
-	Poly    []kyber.Point  `toml:"-"`
-	Share   share.PriShare `toml:"-"`
-	Port    int            `toml:"port"`
+	Key     kyber.Scalar    `toml:"-"`
+	Signers []dkg.Node      `toml:"-"`
+	Poly    []kyber.Point   `toml:"-"`
+	Share   *share.PriShare `toml:"-"`
+	Port    int             `toml:"port"`
 }
 
 func NewServer(store store.Storage, conf *Configuration) *http.Server {
@@ -68,7 +68,7 @@ func (hdr *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
 		hdr.error(w, r, http.StatusBadRequest)
 		return
 	}
-	data, sig, err := sign(hdr.conf.Key, hdr.store, &body, &hdr.conf.Share)
+	data, sig, err := sign(hdr.conf.Key, hdr.store, &body, hdr.conf.Share)
 	if err == ErrTooManyRequest {
 		hdr.error(w, r, http.StatusTooManyRequests)
 		return

@@ -3,6 +3,8 @@ package store
 import "time"
 
 type Storage interface {
+	CheckGroupIdenity(group []byte) (bool, error)
+
 	ReadPolyPublic() ([]byte, error)
 	ReadPolyShare() ([]byte, error)
 	WritePoly(public, share []byte) error

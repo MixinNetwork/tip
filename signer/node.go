@@ -3,6 +3,7 @@ package signer
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
+	"golang.org/x/crypto/sha3"
 )
 
 type Configuration struct {
@@ -27,6 +29,7 @@ type Node struct {
 
 	setupActions map[string]*SetupBundle
 	dkgStarted   bool
+	dkgDone      context.CancelFunc
 	board        *Board
 
 	key      kyber.Scalar
@@ -35,15 +38,16 @@ type Node struct {
 	signers  []dkg.Node
 	period   time.Duration
 
-	share share.PriShare
+	share *share.PriShare
 	poly  []kyber.Point
 }
 
-func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messenger, conf *Configuration) *Node {
+func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage, messenger messenger.Messenger, conf *Configuration) *Node {
 	node := &Node{
 		store:        store,
 		messenger:    messenger,
 		setupActions: make(map[string]*SetupBundle),
+		dkgDone:      cancel,
 		index:        -1,
 	}
 	scalar, err := crypto.PrivateKeyFromHex(conf.Key)
@@ -52,12 +56,14 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 	}
 	node.key = scalar
 	node.identity = crypto.PublicKey(scalar)
+	var group []byte
 	sort.Slice(conf.Signers, func(i, j int) bool { return conf.Signers[i] < conf.Signers[j] })
 	for i, s := range conf.Signers {
 		point, err := crypto.PubKeyFromBase58(s)
 		if err != nil {
 			panic(s)
 		}
+		group = append(group, crypto.PublicKeyBytes(point)...)
 		node.signers = append(node.signers, dkg.Node{
 			Index:  uint32(i),
 			Public: point,
@@ -65,6 +71,11 @@ func NewNode(ctx context.Context, store store.Storage, messenger messenger.Messe
 		if node.identity.Equal(point) {
 			node.index = i
 		}
+	}
+	groupId := sha3.Sum256(group)
+	valid, err := store.CheckGroupIdenity(groupId[:])
+	if err != nil || !valid {
+		panic(fmt.Errorf("Group check failed %v %v", valid, err))
 	}
 	node.period = time.Second * time.Duration(conf.TimeoutSeconds)
 	if node.index < 0 {
@@ -99,7 +110,7 @@ func (node *Node) GetSigners() []dkg.Node {
 	return node.signers
 }
 
-func (node *Node) GetShare() share.PriShare {
+func (node *Node) GetShare() *share.PriShare {
 	return node.share
 }
 
@@ -108,6 +119,9 @@ func (node *Node) GetPoly() []kyber.Point {
 }
 
 func (node *Node) Run(ctx context.Context) error {
+	if node.share != nil || node.poly != nil {
+		return nil
+	}
 	for {
 		b, err := node.messenger.ReceiveMessage(ctx)
 		if err != nil {

@@ -69,6 +69,28 @@ func TestBadgerNonce(t *testing.T) {
 	assert.True(res)
 }
 
+func TestBadgerGroupIdentity(t *testing.T) {
+	assert := assert.New(t)
+	bs := testBadgerStore()
+	defer bs.Close()
+
+	valid, err := bs.CheckGroupIdenity([]byte("group"))
+	assert.Nil(err)
+	assert.True(valid)
+
+	valid, err = bs.CheckGroupIdenity([]byte("group"))
+	assert.Nil(err)
+	assert.True(valid)
+
+	valid, err = bs.CheckGroupIdenity([]byte("invalid"))
+	assert.Nil(err)
+	assert.False(valid)
+
+	valid, err = bs.CheckGroupIdenity([]byte("group"))
+	assert.Nil(err)
+	assert.True(valid)
+}
+
 func testBadgerStore() *BadgerStorage {
 	dir, err := os.MkdirTemp("/tmp", "tip-badger-test")
 	if err != nil {
