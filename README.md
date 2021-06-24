@@ -42,6 +42,8 @@ After the signing request passes all throttle checks, the signer responds back a
 
 The final collective signature is the seed to the secret key of the user. Then it's up to the user to use different algorithm to generate their private key for Bitcoin or other usages. It doesn't need any further requests to use this secret key, and in case of the loss the user can recover it by making the same requests.
 
+For details of the throttle restrictions, please see the **keeper** directory.
+
 ### Threshold Identity Generation
 
 The mission of TIP network is to let people truly own their coins by only remembering a 6-digit PIN, so they should not have the duty to store *identity*, *ephemeral* or *nonce*. They is capable of achieving this goal through the threshold identity generation process with the help from the trusted account manager.
