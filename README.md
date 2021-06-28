@@ -16,7 +16,7 @@ It's what TIP strives to do. Let people truly own their coins with a six-digit P
 
 ## Protocol Design
 
-TIP involves three independent parties to make the protocol work. A decentralized signer network authenticates signing requests from user, and throttle malicious attempts; A trusted account manager to serve user an identity seed, which typically authenticates user by email or phone verification code; The user who remembers a PIN and combines the identity seed from account manager, then make independent requests to enough signer network nodes, and finally derive their secret key.
+TIP involves three independent parties to make the protocol work. A decentralized signer network authenticates signing requests from user, and throttles malicious attempts; A trusted account manager serves user an identity seed, which typically authenticates user by email or phone verification code; The user who remembers a PIN and combines the identity seed from account manager, then makes independent requests to enough signer network nodes, and finally derives their secret key.
 
 ### Decentralized Network Setup
 
