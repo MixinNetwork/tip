@@ -100,6 +100,7 @@ func main() {
 
 func runSigner(c *cli.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	cp := c.String("config")
 	conf, err := config.ReadConfiguration(cp)

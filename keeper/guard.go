@@ -88,7 +88,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if err != nil || available < 1 {
 		return nil, err
 	}
-	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace))
+	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), body.Assignee)
 	if err == nil {
 		return &Response{
 			Available: available,
@@ -100,7 +100,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	return nil, err
 }
 
-func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64) error {
+func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64, as string) error {
 	msg := crypto.PublicKeyBytes(pub)
 	msg = append(msg, eb.Bytes()...)
 	buf := make([]byte, 8)
@@ -111,22 +111,47 @@ func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace u
 	if rb != nil && rb.Sign() > 0 {
 		msg = append(msg, rb.Bytes()...)
 	}
+	if len(as) > 0 {
+		ab, err := checkAssignee(as)
+		if err != nil {
+			return err
+		}
+		msg = append(msg, ab...)
+	}
 	return crypto.Verify(pub, msg, sig)
 }
 
+func checkAssignee(as string) ([]byte, error) {
+	ab, err := hex.DecodeString(as)
+	if err != nil {
+		return nil, fmt.Errorf("invalid assignee format %s", err)
+	}
+	if len(ab) != 192 {
+		return nil, fmt.Errorf("invalid assignee format %d", len(as))
+	}
+	pub, err := crypto.PubKeyFromBytes(ab[:128])
+	if err != nil {
+		return nil, fmt.Errorf("invalid assignee public key %d", err)
+	}
+	return ab, crypto.Verify(pub, ab[:128], ab[128:])
+}
+
 type body struct {
-	// the main identity public key to check signature
+	// main identity public key to check signature
 	Identity string `json:"identity"`
+
+	// a new identity to represent the main identity
+	Assignee string `json:"assignee"`
 
 	// the ephemeral secret to authenticate
 	Ephemeral string `json:"ephemeral"`
 
-	// the ephemeral grace period to main the secret valid, the grace
+	// ephemeral grace period to maintain the secret valid, the grace
 	// will be extended for each valid request, and if the grace expired
 	// the ephemeral can be reset
 	Grace int64 `json:"grace"`
 
-	// the nonce to ensure each request can only be used once
+	// ensure each request can only be used once
 	Nonce int64 `json:"nonce"`
 
 	// the ephemeral rotation allows user to use a new secret
