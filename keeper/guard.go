@@ -115,9 +115,22 @@ func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace u
 }
 
 type body struct {
-	Identity  string `json:"identity"`
+	// the main identity public key to check signature
+	Identity string `json:"identity"`
+
+	// the ephemeral secret to authenticate
 	Ephemeral string `json:"ephemeral"`
-	Grace     int64  `json:"grace"`
-	Nonce     int64  `json:"nonce"`
-	Rotate    string `json:"rotate"`
+
+	// the ephemeral grace period to main the secret valid, the grace
+	// will be extended for each valid request, and if the grace expired
+	// the ephemeral can be reset
+	Grace int64 `json:"grace"`
+
+	// the nonce to ensure each request can only be used once
+	Nonce int64 `json:"nonce"`
+
+	// the ephemeral rotation allows user to use a new secret
+	// e.g. when they cooperate with others to generate a non-random
+	// ephemeral to replace their on-device random one
+	Rotate string `json:"rotate"`
 }
