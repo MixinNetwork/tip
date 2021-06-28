@@ -48,6 +48,13 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if body.Identity != identity {
 		return nil, fmt.Errorf("invalid idenity %s", identity)
 	}
+	var ab []byte
+	if len(body.Assignee) > 0 {
+		ab, err = checkAssignee(body.Assignee)
+		if err != nil {
+			return nil, err
+		}
+	}
 	eb, valid := new(big.Int).SetString(body.Ephemeral, 16)
 	if !valid {
 		return nil, fmt.Errorf("invalid ephemeral %s", body.Ephemeral)
@@ -88,8 +95,24 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if err != nil || available < 1 {
 		return nil, err
 	}
-	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), body.Assignee)
+	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
 	if err == nil {
+		if len(ab) > 0 {
+			err := store.WriteAssignee(ab[:128], crypto.PublicKeyBytes(pub))
+			if err != nil {
+				return nil, err
+			}
+		}
+		ib, err := store.ReadAssignee(crypto.PublicKeyBytes(pub))
+		if err != nil {
+			return nil, err
+		}
+		if len(ib) > 0 {
+			pub, err = crypto.PubKeyFromBytes(ib)
+			if err != nil {
+				panic(err)
+			}
+		}
 		return &Response{
 			Available: available,
 			Nonce:     nonce,
@@ -100,7 +123,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	return nil, err
 }
 
-func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64, as string) error {
+func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64, ab []byte) error {
 	msg := crypto.PublicKeyBytes(pub)
 	msg = append(msg, eb.Bytes()...)
 	buf := make([]byte, 8)
@@ -111,13 +134,7 @@ func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace u
 	if rb != nil && rb.Sign() > 0 {
 		msg = append(msg, rb.Bytes()...)
 	}
-	if len(as) > 0 {
-		ab, err := checkAssignee(as)
-		if err != nil {
-			return err
-		}
-		msg = append(msg, ab...)
-	}
+	msg = append(msg, ab...)
 	return crypto.Verify(pub, msg, sig)
 }
 

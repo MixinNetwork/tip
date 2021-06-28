@@ -12,6 +12,8 @@ import (
 const (
 	badgerKeyGroupIdentity = "GROUP"
 
+	badgerKeyPrefixAssignee = "ASSIGNEE#"
+
 	badgerKeyPolyPublic = "POLY#PUBLIC"
 	badgerKeyPolyShare  = "POLY#SHARE"
 
@@ -172,6 +174,28 @@ func (bs *BadgerStorage) WritePoly(public, share []byte) error {
 		}
 		return txn.Set([]byte(badgerKeyPolyShare), share)
 	})
+}
+
+func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
+	key = append([]byte(badgerKeyPrefixAssignee), key...)
+	return bs.db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, assignee)
+	})
+}
+
+func (bs *BadgerStorage) ReadAssignee(key []byte) ([]byte, error) {
+	txn := bs.db.NewTransaction(false)
+	defer txn.Discard()
+
+	key = append([]byte(badgerKeyPrefixAssignee), key...)
+	item, err := txn.Get(key)
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return item.ValueCopy(nil)
 }
 
 func OpenBadger(ctx context.Context, conf *BadgerConfiguration) (*BadgerStorage, error) {
