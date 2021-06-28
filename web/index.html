@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
     <meta name="description" content="Throttled Identity Protocol (TIP) is a decentralized key derivation protocol, which allows people to obtain a strong secret key through a very simple passphrase, e.g. a six-digit PIN.">
     <link href="/favicon.ico" rel="shortcut icon" type="image/vnd.microsoft.icon" />
+    <style>
+      article {
+        max-width: 960px;
+        margin: 32px auto 64px;
+      }
+      img {
+        max-width: 100%;
+      }
+    </style>
   </head>
   <body>
     <div>
@@ -20,6 +29,7 @@
         <p>It's what TIP strives to do. Let people truly own their coins with a six-digit PIN. This decentralized PIN is easy to remember for any people, doesn't require any special skills or hardware, and people can manage their coins with more confidence than ever.</p>
         <h2>Protocol Design</h2>
         <p>TIP involves three independent parties to make the protocol work. A decentralized signer network authenticates signing requests from user, and throttles malicious attempts; A trusted account manager serves user an identity seed, which typically authenticates user by email or phone verification code; The user who remembers a PIN and combines the identity seed from account manager, then makes independent requests to enough signer network nodes, and finally derives their secret key.</p>
+        <p><img src="/workflow.jpg" alt="protocol design workflow diagram"></p>
         <h3>Decentralized Network Setup</h3>
         <p>The decentralized signer network is launched cooperatively by many different entities. Specifically, those entities gather and reach a consensus to run some node software, those nodes interactively run a distributed key generation protocol. For TIP, the DKG is <a href="https://en.wikipedia.org/wiki/Boneh%E2%80%93Lynn%E2%80%93Shacham" rel="nofollow">threshold Boneh-Lynn-Shacham (BLS) signatures</a>.</p>
         <p>Assume <em>n</em> entities agree to launch the network, they generate an asymmetric key pair respectively and configure their node software to include all the entities public keys in a deterministic order. Then they boot the nodes to run a <em>t</em>-of-<em>n</em> (where <em>t = n * 2 / 3 + 1</em>) DKG protocol to setup a collective public key <em>P</em> and private key shares <em>s<sub>i</sub></em> respectively.</p>
