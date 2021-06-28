@@ -98,7 +98,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
 	if err == nil {
 		if len(ab) > 0 {
-			err := store.WriteAssignee(ab[:128], crypto.PublicKeyBytes(pub))
+			err := store.WriteAssignee(crypto.PublicKeyBytes(pub), ab[:128])
 			if err != nil {
 				return nil, err
 			}

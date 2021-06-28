@@ -12,14 +12,13 @@ import (
 const (
 	badgerKeyGroupIdentity = "GROUP"
 
-	badgerKeyPrefixAssignee = "ASSIGNEE#"
-
 	badgerKeyPolyPublic = "POLY#PUBLIC"
 	badgerKeyPolyShare  = "POLY#SHARE"
 
-	badgerKeyPrefixLimit = "LIMIT#"
-	badgerKeyPrefixNonce = "NONCE#"
-	maxUint64            = ^uint64(0)
+	badgerKeyPrefixAssignee = "ASSIGNEE#"
+	badgerKeyPrefixLimit    = "LIMIT#"
+	badgerKeyPrefixNonce    = "NONCE#"
+	maxUint64               = ^uint64(0)
 )
 
 type BadgerConfiguration struct {
@@ -60,7 +59,9 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 
 		var buf [8]byte
 		binary.BigEndian.PutUint64(buf[:], now)
-		return txn.Set(append(prefix, buf[:]...), []byte{1})
+		entry := badger.NewEntry(append(prefix, buf[:]...), []byte{1})
+		entry = entry.WithTTL(window * 2)
+		return txn.SetEntry(entry)
 	})
 	return int(available), err
 }
@@ -177,9 +178,28 @@ func (bs *BadgerStorage) WritePoly(public, share []byte) error {
 }
 
 func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
-	key = append([]byte(badgerKeyPrefixAssignee), key...)
 	return bs.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, assignee)
+		lk := append([]byte(badgerKeyPrefixAssignee), key...)
+		err := txn.Set(lk, assignee)
+		if err != nil {
+			return err
+		}
+		rk := append([]byte(badgerKeyPrefixAssignee), assignee...)
+		err = txn.Set(rk, key)
+		if err != nil {
+			return err
+		}
+		elk := append([]byte(badgerKeyPrefixNonce), key...)
+		item, err := txn.Get(elk)
+		if err != nil {
+			return err
+		}
+		eph, err := item.ValueCopy(nil)
+		if err != nil {
+			return err
+		}
+		erk := append([]byte(badgerKeyPrefixNonce), assignee...)
+		return txn.Set(erk, eph)
 	})
 }
 
