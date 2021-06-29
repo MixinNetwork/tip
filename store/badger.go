@@ -189,6 +189,9 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 		if err != nil {
 			return err
 		}
+		if bytes.Compare(key, assignee) == 0 {
+			return nil
+		}
 		elk := append([]byte(badgerKeyPrefixNonce), key...)
 		item, err := txn.Get(elk)
 		if err != nil {

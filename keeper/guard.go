@@ -97,12 +97,6 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	}
 	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
 	if err == nil {
-		if len(ab) > 0 {
-			err := store.WriteAssignee(crypto.PublicKeyBytes(pub), ab[:128])
-			if err != nil {
-				return nil, err
-			}
-		}
 		ib, err := store.ReadAssignee(crypto.PublicKeyBytes(pub))
 		if err != nil {
 			return nil, err
@@ -111,6 +105,12 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 			pub, err = crypto.PubKeyFromBytes(ib)
 			if err != nil {
 				panic(err)
+			}
+		}
+		if len(ab) > 0 {
+			err := store.WriteAssignee(crypto.PublicKeyBytes(pub), ab[:128])
+			if err != nil {
+				return nil, err
 			}
 		}
 		return &Response{
@@ -146,11 +146,11 @@ func checkAssignee(as string) ([]byte, error) {
 	if len(ab) != 192 {
 		return nil, fmt.Errorf("invalid assignee format %d", len(as))
 	}
-	pub, err := crypto.PubKeyFromBytes(ab[:128])
+	ap, err := crypto.PubKeyFromBytes(ab[:128])
 	if err != nil {
-		return nil, fmt.Errorf("invalid assignee public key %d", err)
+		return nil, fmt.Errorf("invalid assignee public key %s", err)
 	}
-	return ab, crypto.Verify(pub, ab[:128], ab[128:])
+	return ab, crypto.Verify(ap, ab[:128], ab[128:])
 }
 
 type body struct {
