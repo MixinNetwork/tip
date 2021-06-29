@@ -22,21 +22,21 @@ Go to the Mixin Messenger [developers dashboard](https://developers.mixin.one/da
 
 Then all the entities should add all their bots to a Mixin Messenger group chat, then send the link `https://mixin.one/context` to the group chat and open it to  obtain a UUID, which is the `[messenger].conversation` value.
 
-## Run DKG
+## Run Signer DKG
 
 Change `[store].dir` to a secure and permanent directory, this is where the signer database resides. Then the **config/example.toml** is finished, put it to a proper path, e.g. ~/.tip/config.toml.
 
 ```
-$ tip -c ~/.tip/config.toml node
+$ tip -c ~/.tip/config.toml signer
 ```
 
-All entities should run the command above to prepare for the DKG process, and after all entities have started the node, all entities should run the command below.
+All entities should run the command above to prepare for the DKG process, and after all entities have started the node, all of them should run the command below.
 
 ```
 $ tip -c ~/.tip/config.toml setup -nonce 887378
 ```
 
-This command sends out the DKG setup signal to the Mixin Messenger group chat, and after enough signals received, the DKG starts. The `nonce` value must be a large number and all entities should use the same `nonce`.
+This command sends out the DKG setup signal to the Mixin Messenger group chat, and after enough signals received, the DKG starts. The `nonce` value must be a large number and all entities should use the same one.
 
 If the DKG finishes successfully, the node will exit with the output similar to below message.
 
@@ -48,7 +48,7 @@ The first and long hex is the commitments for the collective public key, and all
 
 If some node fails to produce the same public key, all the entities should remove the failed database and restart the DKG setup process until success.
 
-## Run Signer
+## Run Signer API
 
 After the DKG process successfully, all nodes should start the signer API to accept signing requests from users.
 
