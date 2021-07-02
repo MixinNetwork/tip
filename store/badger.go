@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	badgerKeyGroupIdentity = "GROUP"
-
+	badgerKeyPolyGroup  = "POLY#GROUP"
 	badgerKeyPolyPublic = "POLY#PUBLIC"
 	badgerKeyPolyShare  = "POLY#SHARE"
 
@@ -116,9 +115,9 @@ func (bs *BadgerStorage) RotateEphemeralNonce(key, ephemeral []byte, nonce uint6
 	})
 }
 
-func (bs *BadgerStorage) CheckGroupIdenity(group []byte) (bool, error) {
+func (bs *BadgerStorage) CheckPolyGroup(group []byte) (bool, error) {
 	var valid bool
-	key := []byte(badgerKeyGroupIdentity)
+	key := []byte(badgerKeyPolyGroup)
 	err := bs.db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
 		if err == badger.ErrKeyNotFound {

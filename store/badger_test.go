@@ -69,24 +69,24 @@ func TestBadgerNonce(t *testing.T) {
 	assert.True(res)
 }
 
-func TestBadgerGroupIdentity(t *testing.T) {
+func TestBadgerPolyGroup(t *testing.T) {
 	assert := assert.New(t)
 	bs := testBadgerStore()
 	defer bs.Close()
 
-	valid, err := bs.CheckGroupIdenity([]byte("group"))
+	valid, err := bs.CheckPolyGroup([]byte("group"))
 	assert.Nil(err)
 	assert.True(valid)
 
-	valid, err = bs.CheckGroupIdenity([]byte("group"))
+	valid, err = bs.CheckPolyGroup([]byte("group"))
 	assert.Nil(err)
 	assert.True(valid)
 
-	valid, err = bs.CheckGroupIdenity([]byte("invalid"))
+	valid, err = bs.CheckPolyGroup([]byte("invalid"))
 	assert.Nil(err)
 	assert.False(valid)
 
-	valid, err = bs.CheckGroupIdenity([]byte("group"))
+	valid, err = bs.CheckPolyGroup([]byte("group"))
 	assert.Nil(err)
 	assert.True(valid)
 }

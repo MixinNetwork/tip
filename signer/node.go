@@ -73,7 +73,7 @@ func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage
 		}
 	}
 	groupId := sha3.Sum256(group)
-	valid, err := store.CheckGroupIdenity(groupId[:])
+	valid, err := store.CheckPolyGroup(groupId[:])
 	if err != nil || !valid {
 		panic(fmt.Errorf("Group check failed %v %v", valid, err))
 	}
