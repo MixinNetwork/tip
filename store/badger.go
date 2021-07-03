@@ -15,6 +15,7 @@ const (
 	badgerKeyPolyShare  = "POLY#SHARE"
 
 	badgerKeyPrefixAssignee = "ASSIGNEE#"
+	badgerKeyPrefixAssignor = "ASSIGNOR#"
 	badgerKeyPrefixLimit    = "LIMIT#"
 	badgerKeyPrefixNonce    = "NONCE#"
 	maxUint64               = ^uint64(0)
@@ -183,7 +184,7 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 		if err != nil {
 			return err
 		}
-		rk := append([]byte(badgerKeyPrefixAssignee), assignee...)
+		rk := append([]byte(badgerKeyPrefixAssignor), assignee...)
 		err = txn.Set(rk, key)
 		if err != nil {
 			return err
@@ -191,6 +192,12 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 		if bytes.Compare(key, assignee) == 0 {
 			return nil
 		}
+		erk := append([]byte(badgerKeyPrefixNonce), assignee...)
+		_, err = txn.Get(erk)
+		if err != badger.ErrKeyNotFound {
+			return err
+		}
+
 		elk := append([]byte(badgerKeyPrefixNonce), key...)
 		item, err := txn.Get(elk)
 		if err != nil {
@@ -200,7 +207,6 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 		if err != nil {
 			return err
 		}
-		erk := append([]byte(badgerKeyPrefixNonce), assignee...)
 		return txn.Set(erk, eph)
 	})
 }
@@ -210,6 +216,21 @@ func (bs *BadgerStorage) ReadAssignee(key []byte) ([]byte, error) {
 	defer txn.Discard()
 
 	key = append([]byte(badgerKeyPrefixAssignee), key...)
+	item, err := txn.Get(key)
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return item.ValueCopy(nil)
+}
+
+func (bs *BadgerStorage) ReadAssignor(key []byte) ([]byte, error) {
+	txn := bs.db.NewTransaction(false)
+	defer txn.Discard()
+
+	key = append([]byte(badgerKeyPrefixAssignor), key...)
 	item, err := txn.Get(key)
 	if err == badger.ErrKeyNotFound {
 		return nil, nil
