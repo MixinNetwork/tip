@@ -180,7 +180,22 @@ func (bs *BadgerStorage) WritePoly(public, share []byte) error {
 func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 	return bs.db.Update(func(txn *badger.Txn) error {
 		lk := append([]byte(badgerKeyPrefixAssignee), key...)
-		err := txn.Set(lk, assignee)
+		item, err := txn.Get(lk)
+		if err == badger.ErrKeyNotFound {
+		} else if err != nil {
+			return err
+		} else {
+			old, err := item.ValueCopy(nil)
+			if err != nil {
+				return err
+			}
+			rk := append([]byte(badgerKeyPrefixAssignor), old...)
+			err = txn.Delete(rk)
+			if err != nil {
+				return err
+			}
+		}
+		err = txn.Set(lk, assignee)
 		if err != nil {
 			return err
 		}
@@ -199,7 +214,7 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 		}
 
 		elk := append([]byte(badgerKeyPrefixNonce), key...)
-		item, err := txn.Get(elk)
+		item, err = txn.Get(elk)
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,7 @@ type Storage interface {
 	WritePoly(public, share []byte) error
 
 	WriteAssignee(key []byte, assignee []byte) error
+	ReadAssignor(key []byte) ([]byte, error)
 	ReadAssignee(key []byte) ([]byte, error)
 	CheckLimit(key []byte, window time.Duration, quota uint32, increase bool) (int, error)
 	CheckEphemeralNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error)

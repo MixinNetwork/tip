@@ -100,8 +100,13 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		ib, err := store.ReadAssignee(crypto.PublicKeyBytes(pub))
 		if err != nil {
 			return nil, err
+		} else if ib != nil {
+			return nil, fmt.Errorf("invalid identity")
 		}
-		if len(ib) > 0 {
+		ib, err = store.ReadAssignor(crypto.PublicKeyBytes(pub))
+		if err != nil {
+			return nil, err
+		} else if len(ib) > 0 {
 			pub, err = crypto.PubKeyFromBytes(ib)
 			if err != nil {
 				panic(err)
