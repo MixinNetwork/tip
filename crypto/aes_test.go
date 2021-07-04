@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"crypto/aes"
 	"testing"
 
 	"github.com/drand/kyber/pairing/bn256"
@@ -42,7 +41,7 @@ func TestEncDec(t *testing.T) {
 
 	text := []byte("hello")
 	b := Encrypt(p2, s1, text)
-	assert.Len(b, aes.BlockSize*2)
+	assert.Len(b, 12+16+len(text))
 	dec := Decrypt(p1, s2, b)
 	assert.Equal(text, dec)
 }

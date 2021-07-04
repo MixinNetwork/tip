@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"crypto/aes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -31,7 +30,7 @@ type Response struct {
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (*Response, error) {
 	b, err := base64.RawURLEncoding.DecodeString(data)
-	if err != nil || len(b) < aes.BlockSize*2 || len(b)%aes.BlockSize != 0 {
+	if err != nil {
 		return nil, fmt.Errorf("invalid data %s", data)
 	}
 	pub, err := crypto.PubKeyFromBase58(identity)

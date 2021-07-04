@@ -37,6 +37,7 @@ func TestGuard(t *testing.T) {
 	for i := uint64(0); i < 10; i++ {
 		signature, data := makeTestRequest(user, node, ephmr, nil, 1024+i, grace)
 		res, err := Guard(bs, signer, identity, signature, data)
+		assert.Nil(err)
 		assert.Equal(SecretLimitQuota, res.Available)
 		assert.Equal(1024+i, res.Nonce)
 		assert.Nil(err)

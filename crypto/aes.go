@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -28,31 +27,29 @@ func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
 
 func Decrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 	secret := ecdh(pub, priv)
-	block, _ := aes.NewCipher(secret)
-	iv := b[:aes.BlockSize]
-	b = b[aes.BlockSize:]
-	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(b, b)
-	plen := int(b[len(b)-1])
-	return b[:len(b)-plen]
+	aes, _ := aes.NewCipher(secret)
+	aead, _ := cipher.NewGCM(aes)
+	nonce := b[:aead.NonceSize()]
+	cipher := b[aead.NonceSize():]
+	d, _ := aead.Open(nil, nonce, cipher, nil)
+	return d
 }
 
 func Encrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 	secret := ecdh(pub, priv)
-	plen := aes.BlockSize - len(b)%aes.BlockSize
-	padd := bytes.Repeat([]byte{byte(plen)}, plen)
-	b = append(b, padd...)
-	block, err := aes.NewCipher(secret)
+	aes, err := aes.NewCipher(secret)
 	if err != nil {
 		panic(err)
 	}
-	encrypted := make([]byte, aes.BlockSize+len(b))
-	iv := encrypted[:aes.BlockSize]
-	_, err = io.ReadFull(rand.Reader, iv)
+	aead, err := cipher.NewGCM(aes)
 	if err != nil {
 		panic(err)
 	}
-	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(encrypted[aes.BlockSize:], b)
-	return encrypted
+	nonce := make([]byte, aead.NonceSize())
+	_, err = io.ReadFull(rand.Reader, nonce)
+	if err != nil {
+		panic(err)
+	}
+	cipher := aead.Seal(nil, nonce, b, nil)
+	return append(nonce, cipher...)
 }
