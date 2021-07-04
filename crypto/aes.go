@@ -9,11 +9,16 @@ import (
 
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
+	"github.com/drand/kyber/util/random"
 	"golang.org/x/crypto/sha3"
 )
 
-func DH(point kyber.Point, scalar kyber.Scalar) []byte {
+func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
 	suite := bn256.NewSuiteG2()
+	if point.Equal(suite.Point()) {
+		r := suite.Scalar().Pick(random.New())
+		point = point.Mul(r, nil)
+	}
 	point = suite.Point().Mul(scalar, point)
 
 	b := PublicKeyBytes(point)
@@ -22,7 +27,7 @@ func DH(point kyber.Point, scalar kyber.Scalar) []byte {
 }
 
 func Decrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
-	secret := DH(pub, priv)
+	secret := ecdh(pub, priv)
 	block, _ := aes.NewCipher(secret)
 	iv := b[:aes.BlockSize]
 	b = b[aes.BlockSize:]
@@ -33,7 +38,7 @@ func Decrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 }
 
 func Encrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
-	secret := DH(pub, priv)
+	secret := ecdh(pub, priv)
 	plen := aes.BlockSize - len(b)%aes.BlockSize
 	padd := bytes.Repeat([]byte{byte(plen)}, plen)
 	b = append(b, padd...)
