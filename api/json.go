@@ -7,6 +7,7 @@ import (
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/keeper"
+	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
@@ -47,7 +48,8 @@ func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, 
 func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
 	res, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
 	if err != nil {
-		return nil, "", err
+		logger.Debug("keeper.Guard", err)
+		return nil, "", ErrUnknown
 	}
 	if res == nil || res.Available < 1 {
 		return nil, "", ErrTooManyRequest

@@ -2,4 +2,7 @@ package api
 
 import "fmt"
 
-var ErrTooManyRequest = fmt.Errorf("too many request")
+var (
+	ErrUnknown        = fmt.Errorf("server error")
+	ErrTooManyRequest = fmt.Errorf("too many request")
+)
