@@ -1,7 +1,6 @@
 package tip
 
 import (
-	"crypto/aes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -102,7 +101,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 			evicted = append(evicted, s)
 			continue
 		}
-		if len(enc)%aes.BlockSize != 0 {
+		if len(enc) < 32 {
 			evicted = append(evicted, s)
 			continue
 		}
