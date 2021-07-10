@@ -40,7 +40,6 @@ func TestGuard(t *testing.T) {
 		assert.Nil(err)
 		assert.Equal(SecretLimitQuota, res.Available)
 		assert.Equal(1024+i, res.Nonce)
-		assert.Nil(err)
 		key := crypto.PublicKeyBytes(crypto.PublicKey(user))
 		lkey := append(key, "EPHEMERAL"...)
 		available, err := bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
@@ -114,7 +113,55 @@ func TestGuard(t *testing.T) {
 	assert.Nil(err)
 }
 
+func TestAssigneeAndRotation(t *testing.T) {
+	assert := assert.New(t)
+
+	dir, _ := os.MkdirTemp("/tmp", "tip-keeper-test")
+	conf := &store.BadgerConfiguration{Dir: dir}
+	bs, _ := store.OpenBadger(context.Background(), conf)
+	defer bs.Close()
+
+	suite := bn256.NewSuiteBn256()
+	signer := suite.Scalar().Pick(random.New())
+	node := crypto.PublicKey(signer)
+
+	u1 := suite.Scalar().Pick(random.New())
+	i1 := crypto.PublicKeyString(crypto.PublicKey(u1))
+	u2 := suite.Scalar().Pick(random.New())
+	i2 := crypto.PublicKeyString(crypto.PublicKey(u2))
+	u3 := suite.Scalar().Pick(random.New())
+	i3 := crypto.PublicKeyString(crypto.PublicKey(u3))
+
+	ephmr := crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
+	grace := uint64(time.Hour * 24 * 128)
+	signature, data := makeTestRequest(u1, node, ephmr, nil, 1024, grace)
+	res, err := Guard(bs, signer, i1, signature, data)
+	assert.Nil(err)
+	assert.Equal(SecretLimitQuota, res.Available)
+	assert.Equal(1024, int(res.Nonce))
+
+	ephmr = crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
+	grace = uint64(time.Hour * 24 * 128)
+	signature, data = makeTestRequest(u2, node, ephmr, nil, 1024, grace)
+	res, err = Guard(bs, signer, i2, signature, data)
+	assert.Nil(err)
+	assert.Equal(SecretLimitQuota, res.Available)
+	assert.Equal(1024, int(res.Nonce))
+
+	ephmr = crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
+	grace = uint64(time.Hour * 24 * 128)
+	signature, data = makeTestRequest(u3, node, ephmr, nil, 1024, grace)
+	res, err = Guard(bs, signer, i3, signature, data)
+	assert.Nil(err)
+	assert.Equal(SecretLimitQuota, res.Available)
+	assert.Equal(1024, int(res.Nonce))
+}
+
 func makeTestRequest(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64) (string, string) {
+	return makeTestRequestWithAssigneeAndRotation(user, signer, ephmr, rtt, nonce, grace, "", "")
+}
+
+func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64, assignee, rotation string) (string, string) {
 	pkey := crypto.PublicKey(user)
 	msg := crypto.PublicKeyBytes(pkey)
 	msg = append(msg, ephmr...)

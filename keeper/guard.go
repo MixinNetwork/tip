@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -63,9 +64,22 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if err != nil {
 		return nil, fmt.Errorf("invalid signature %s", signature)
 	}
-	key := crypto.PublicKeyBytes(pub)
 
-	lkey := append(key, "EPHEMERAL"...)
+	assignee, err := store.ReadAssignee(crypto.PublicKeyBytes(pub))
+	if err != nil {
+		return nil, err
+	} else if assignee != nil && bytes.Compare(assignee, crypto.PublicKeyBytes(pub)) != 0 {
+		return nil, fmt.Errorf("invalid assignee %s", assignee)
+	}
+
+	assignor, err := store.ReadAssignor(crypto.PublicKeyBytes(pub))
+	if err != nil {
+		return nil, err
+	} else if assignor == nil {
+		assignor = crypto.PublicKeyBytes(pub)
+	}
+
+	lkey := append(assignor, "EPHEMERAL"...)
 	available, err := store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
 	if err != nil || available < 1 {
 		return nil, err
@@ -74,7 +88,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if grace < EphemeralGracePeriod {
 		grace = EphemeralGracePeriod
 	}
-	valid, err = store.CheckEphemeralNonce(key, eb.Bytes(), nonce, grace)
+	valid, err = store.CheckEphemeralNonce(assignor, eb.Bytes(), nonce, grace)
 	if err != nil {
 		return nil, err
 	}
@@ -83,34 +97,19 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return nil, err
 	}
 	if rb != nil && rb.Sign() > 0 {
-		err = store.RotateEphemeralNonce(key, rb.Bytes(), nonce)
+		err = store.RotateEphemeralNonce(assignor, rb.Bytes(), nonce)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	lkey = append(key, "SECRET"...)
+	lkey = append(assignor, "SECRET"...)
 	available, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, false)
 	if err != nil || available < 1 {
 		return nil, err
 	}
 	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
 	if err == nil {
-		ib, err := store.ReadAssignee(crypto.PublicKeyBytes(pub))
-		if err != nil {
-			return nil, err
-		} else if ib != nil {
-			return nil, fmt.Errorf("invalid identity")
-		}
-		ib, err = store.ReadAssignor(crypto.PublicKeyBytes(pub))
-		if err != nil {
-			return nil, err
-		} else if len(ib) > 0 {
-			pub, err = crypto.PubKeyFromBytes(ib)
-			if err != nil {
-				panic(err)
-			}
-		}
 		if len(ab) > 0 {
 			err := store.WriteAssignee(crypto.PublicKeyBytes(pub), ab[:128])
 			if err != nil {

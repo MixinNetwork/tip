@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,17 +98,17 @@ func TestBadgerAssignee(t *testing.T) {
 
 	a, b, c := []byte{1}, []byte{2}, []byte{3}
 	err := bs.WriteAssignee(a, b)
-	assert.Equal(badger.ErrKeyNotFound, err)
+	assert.Nil(err)
 	available, err := bs.CheckLimit(a, time.Second*3, 3, true)
 	assert.Nil(err)
 	assert.Equal(3, available)
 	err = bs.WriteAssignee(a, b)
-	assert.Equal(badger.ErrKeyNotFound, err)
+	assert.Contains(err.Error(), "invalid assignee")
 	res, err := bs.CheckEphemeralNonce(a, a, 0, time.Second)
 	assert.Nil(err)
 	assert.True(res)
 	err = bs.WriteAssignee(a, b)
-	assert.Nil(err)
+	assert.Contains(err.Error(), "invalid assignee")
 	ee, err := bs.ReadAssignee(a)
 	assert.Nil(err)
 	assert.Equal(b, ee)
@@ -124,7 +123,7 @@ func TestBadgerAssignee(t *testing.T) {
 	assert.False(res)
 	res, err = bs.CheckEphemeralNonce(b, a, 0, time.Second)
 	assert.Nil(err)
-	assert.False(res)
+	assert.True(res)
 	res, err = bs.CheckEphemeralNonce(b, b, 1, time.Second)
 	assert.Nil(err)
 	assert.False(res)
@@ -135,19 +134,19 @@ func TestBadgerAssignee(t *testing.T) {
 	assert.Nil(err)
 	assert.True(res)
 	err = bs.WriteAssignee(a, c)
-	assert.Nil(err)
+	assert.Contains(err.Error(), "invalid assignee")
 	ee, err = bs.ReadAssignee(a)
 	assert.Nil(err)
-	assert.Equal(c, ee)
+	assert.Equal(b, ee)
 	or, err = bs.ReadAssignor(a)
 	assert.Nil(err)
 	assert.Nil(or)
 	or, err = bs.ReadAssignor(b)
 	assert.Nil(err)
-	assert.Nil(or)
+	assert.Equal(a, or)
 	or, err = bs.ReadAssignor(c)
 	assert.Nil(err)
-	assert.Equal(a, or)
+	assert.Nil(or)
 	res, err = bs.CheckEphemeralNonce(c, a, 1, time.Second)
 	assert.Nil(err)
 	assert.False(res)

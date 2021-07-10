@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
@@ -179,50 +180,43 @@ func (bs *BadgerStorage) WritePoly(public, share []byte) error {
 
 func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 	return bs.db.Update(func(txn *badger.Txn) error {
-		lk := append([]byte(badgerKeyPrefixAssignee), key...)
-		item, err := txn.Get(lk)
-		if err == badger.ErrKeyNotFound {
-		} else if err != nil {
-			return err
-		} else {
-			old, err := item.ValueCopy(nil)
+		if bytes.Compare(key, assignee) != 0 {
+			old, err := readKey(txn, badgerKeyPrefixAssignee, assignee)
 			if err != nil {
 				return err
+			} else if old != nil {
+				return fmt.Errorf("invalid assignee")
 			}
+			old, err = readKey(txn, badgerKeyPrefixAssignor, assignee)
+			if err != nil {
+				return err
+			} else if old != nil {
+				return fmt.Errorf("invalid assignee")
+			}
+			old, err = readKey(txn, badgerKeyPrefixNonce, assignee)
+			if err != nil {
+				return err
+			} else if old != nil {
+				return fmt.Errorf("invalid assignee")
+			}
+		}
+		old, err := readKey(txn, badgerKeyPrefixAssignee, key)
+		if err != nil {
+			return err
+		} else if old != nil {
 			rk := append([]byte(badgerKeyPrefixAssignor), old...)
 			err = txn.Delete(rk)
 			if err != nil {
 				return err
 			}
 		}
+		lk := append([]byte(badgerKeyPrefixAssignee), key...)
 		err = txn.Set(lk, assignee)
 		if err != nil {
 			return err
 		}
 		rk := append([]byte(badgerKeyPrefixAssignor), assignee...)
-		err = txn.Set(rk, key)
-		if err != nil {
-			return err
-		}
-		if bytes.Compare(key, assignee) == 0 {
-			return nil
-		}
-		erk := append([]byte(badgerKeyPrefixNonce), assignee...)
-		_, err = txn.Get(erk)
-		if err != badger.ErrKeyNotFound {
-			return err
-		}
-
-		elk := append([]byte(badgerKeyPrefixNonce), key...)
-		item, err = txn.Get(elk)
-		if err != nil {
-			return err
-		}
-		eph, err := item.ValueCopy(nil)
-		if err != nil {
-			return err
-		}
-		return txn.Set(erk, eph)
+		return txn.Set(rk, key)
 	})
 }
 
@@ -230,30 +224,14 @@ func (bs *BadgerStorage) ReadAssignee(key []byte) ([]byte, error) {
 	txn := bs.db.NewTransaction(false)
 	defer txn.Discard()
 
-	key = append([]byte(badgerKeyPrefixAssignee), key...)
-	item, err := txn.Get(key)
-	if err == badger.ErrKeyNotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return item.ValueCopy(nil)
+	return readKey(txn, badgerKeyPrefixAssignee, key)
 }
 
 func (bs *BadgerStorage) ReadAssignor(key []byte) ([]byte, error) {
 	txn := bs.db.NewTransaction(false)
 	defer txn.Discard()
 
-	key = append([]byte(badgerKeyPrefixAssignor), key...)
-	item, err := txn.Get(key)
-	if err == badger.ErrKeyNotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return item.ValueCopy(nil)
+	return readKey(txn, badgerKeyPrefixAssignor, key)
 }
 
 func OpenBadger(ctx context.Context, conf *BadgerConfiguration) (*BadgerStorage, error) {
@@ -268,4 +246,16 @@ func OpenBadger(ctx context.Context, conf *BadgerConfiguration) (*BadgerStorage,
 
 func (bs *BadgerStorage) Close() {
 	bs.db.Close()
+}
+
+func readKey(txn *badger.Txn, prefix string, key []byte) ([]byte, error) {
+	key = append([]byte(prefix), key...)
+	item, err := txn.Get(key)
+	if err == badger.ErrKeyNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return item.ValueCopy(nil)
 }
