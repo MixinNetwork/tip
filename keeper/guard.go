@@ -27,6 +27,7 @@ type Response struct {
 	Available int
 	Nonce     uint64
 	Identity  kyber.Point
+	Assignor  []byte
 }
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (*Response, error) {
@@ -111,7 +112,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
 	if err == nil {
 		if len(ab) > 0 {
-			err := store.WriteAssignee(crypto.PublicKeyBytes(pub), ab[:128])
+			err := store.WriteAssignee(assignor, ab[:128])
 			if err != nil {
 				return nil, err
 			}
@@ -120,6 +121,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 			Available: available,
 			Nonce:     nonce,
 			Identity:  pub,
+			Assignor:  assignor,
 		}, nil
 	}
 	_, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)

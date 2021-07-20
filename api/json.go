@@ -55,7 +55,7 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 		return nil, "", ErrTooManyRequest
 	}
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
-	partial, err := scheme.Sign(priv, []byte(body.Identity))
+	partial, err := scheme.Sign(priv, res.Assignor)
 	if err != nil {
 		panic(err)
 	}
