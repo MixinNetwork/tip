@@ -24,7 +24,7 @@ type ResponseData struct {
 		Identity string `json:"identity"`
 		Index    int    `json:"index"`
 	} `json:"signers,omitempty"`
-	Partial string `json:"partial,omitempty"`
+	Cipher string `json:"cipher,omitempty"`
 }
 
 type Response struct {

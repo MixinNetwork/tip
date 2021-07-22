@@ -61,10 +61,11 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	}
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, res.Nonce)
-	partial = append(buf, partial...)
-	partial = crypto.Encrypt(res.Identity, key, partial)
+	plain := append(buf, partial...)
+	plain = append(plain, res.Assignor...)
+	cipher := crypto.Encrypt(res.Identity, key, plain)
 	data := map[string]interface{}{
-		"partial": hex.EncodeToString(partial),
+		"cipher": hex.EncodeToString(cipher),
 	}
 	b, _ := json.Marshal(data)
 	sig, _ := crypto.Sign(key, b)

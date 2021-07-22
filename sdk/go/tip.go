@@ -1,6 +1,7 @@
 package tip
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -87,8 +88,11 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 		}
 	}
 
+	var assignor []byte
 	var partials [][]byte
 	var evicted []*signerPair
+	pam := make(map[string][]byte)
+	acm := make(map[string]int)
 	for _, s := range c.signers {
 		data := sign(key, s.Identity, ephemeral, uint64(nonce), uint64(grace), rotate)
 		res, err := request(s, "POST", data)
@@ -96,7 +100,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 			evicted = append(evicted, s)
 			continue
 		}
-		enc, err := hex.DecodeString(res.Partial)
+		enc, err := hex.DecodeString(res.Cipher)
 		if err != nil {
 			evicted = append(evicted, s)
 			continue
@@ -110,7 +114,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 			panic(err)
 		}
 		dec := crypto.Decrypt(pub, key, enc)
-		if len(dec) != 66+8 {
+		if len(dec) != 128+66+8 {
 			evicted = append(evicted, s)
 			continue
 		}
@@ -118,20 +122,38 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 			evicted = append(evicted, s)
 			continue
 		}
-		partials = append(partials, dec[8:])
+		p, a := dec[8:74], dec[74:]
+		as := hex.EncodeToString(a)
+		pam[hex.EncodeToString(p)] = a
+		acm[as] = acm[as] + 1
 	}
+	var amc int
+	for a, c := range acm {
+		if c <= amc {
+			continue
+		}
+		assignor, _ = hex.DecodeString(a)
+		amc = c
+	}
+	for p, a := range pam {
+		if bytes.Compare(a, assignor) != 0 {
+			continue
+		}
+		partial, _ := hex.DecodeString(p)
+		partials = append(partials, partial)
+	}
+
 	if len(partials) < len(c.commitments) {
 		return nil, evicted, fmt.Errorf("not enought partials %d %d", len(partials), len(c.commitments))
 	}
 	suite := bn256.NewSuiteG2()
-	id := crypto.PublicKeyString(crypto.PublicKey(key))
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	poly := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
-	sig, err := scheme.Recover(poly, []byte(id), partials, len(c.commitments), len(c.signers))
+	sig, err := scheme.Recover(poly, assignor, partials, len(c.commitments), len(c.signers))
 	if err != nil {
 		return nil, evicted, err
 	}
-	err = crypto.Verify(poly.Commit(), []byte(id), sig)
+	err = crypto.Verify(poly.Commit(), assignor, sig)
 	if err != nil {
 		return nil, evicted, err
 	}
