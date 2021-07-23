@@ -67,7 +67,7 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 	}
 
 	if sc := len(conf.Signers) - len(evicted); sc < len(conf.Commitments) {
-		return nil, evicted, fmt.Errorf("not enought signers %d %d", sc, len(conf.Commitments))
+		return nil, evicted, fmt.Errorf("not enough signers %d %d", sc, len(conf.Commitments))
 	}
 	return cli, evicted, nil
 }
@@ -144,7 +144,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate string) (
 	}
 
 	if len(partials) < len(c.commitments) {
-		return nil, evicted, fmt.Errorf("not enought partials %d %d", len(partials), len(c.commitments))
+		return nil, evicted, fmt.Errorf("not enough partials %d %d", len(partials), len(c.commitments))
 	}
 	suite := bn256.NewSuiteG2()
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
