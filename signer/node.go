@@ -123,7 +123,7 @@ func (node *Node) Run(ctx context.Context) error {
 		return nil
 	}
 	for {
-		b, err := node.messenger.ReceiveMessage(ctx)
+		_, b, err := node.messenger.ReceiveMessage(ctx)
 		if err != nil {
 			return err
 		}

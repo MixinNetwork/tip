@@ -8,6 +8,7 @@ import (
 
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/fox-one/mixin-sdk-go"
+	"github.com/gofrs/uuid"
 )
 
 type MixinConfiguration struct {
@@ -46,12 +47,16 @@ func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMes
 	return mm, nil
 }
 
-func (mm *MixinMessenger) ReceiveMessage(ctx context.Context) ([]byte, error) {
+func (mm *MixinMessenger) ReceiveMessage(ctx context.Context) (string, []byte, error) {
 	select {
 	case b := <-mm.recv:
-		return b, nil
+		sender, err := uuid.FromBytes(b[:16])
+		if err != nil {
+			panic(err)
+		}
+		return sender.String(), b[16:], nil
 	case <-ctx.Done():
-		return nil, ErrorDone
+		return "", nil, ErrorDone
 	}
 }
 
@@ -92,6 +97,11 @@ func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView,
 	if err != nil {
 		return nil
 	}
+	sender, err := uuid.FromString(msg.UserID)
+	if err != nil {
+		return nil
+	}
+	data = append(sender.Bytes(), data...)
 	select {
 	case mm.recv <- data:
 	case <-ctx.Done():
