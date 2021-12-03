@@ -236,15 +236,15 @@ func hashToPoint(m []byte) (*big.Int, *big.Int) {
 
 	h := sha256.Sum256(m)
 	x := new(big.Int).SetBytes(h[:])
-	x.Mod(x, p)
+	x.Mod(x, P)
 
 	for {
 		xxx := new(big.Int).Mul(x, x)
 		xxx.Mul(xxx, x)
-		xxx.Mod(xxx, p)
+		xxx.Mod(xxx, P)
 
 		t := new(big.Int).Add(xxx, intCurveB)
-		y := new(big.Int).ModSqrt(t, p)
+		y := new(big.Int).ModSqrt(t, P)
 		if y != nil {
 			return x, y
 		}

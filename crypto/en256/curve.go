@@ -1,7 +1,6 @@
 package en256
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -22,12 +21,11 @@ var curveGen = &curvePoint{
 }
 
 func (c *curvePoint) String() string {
-	cpy := c.Clone()
-	cpy.MakeAffine()
+	c.MakeAffine()
 	x, y := &gfP{}, &gfP{}
-	montDecode(x, &cpy.x)
-	montDecode(y, &cpy.y)
-	return fmt.Sprintf("(%s, %s)", x.String(), y.String())
+	montDecode(x, &c.x)
+	montDecode(y, &c.y)
+	return "(" + x.String() + ", " + y.String() + ")"
 }
 
 func (c *curvePoint) Set(a *curvePoint) {
@@ -185,18 +183,26 @@ func (c *curvePoint) Double(a *curvePoint) {
 }
 
 func (c *curvePoint) Mul(a *curvePoint, scalar *big.Int) {
-	sum, t := &curvePoint{}, &curvePoint{}
-	sum.SetInfinity()
+	precomp := [1 << 2]*curvePoint{nil, {}, {}, {}}
+	precomp[1].Set(a)
+	precomp[2].Set(a)
+	gfpMul(&precomp[2].x, &precomp[2].x, xiTo2PSquaredMinus2Over3)
+	precomp[3].Add(precomp[1], precomp[2])
 
-	for i := scalar.BitLen(); i >= 0; i-- {
+	multiScalar := curveLattice.Multi(scalar)
+
+	sum := &curvePoint{}
+	sum.SetInfinity()
+	t := &curvePoint{}
+
+	for i := len(multiScalar) - 1; i >= 0; i-- {
 		t.Double(sum)
-		if scalar.Bit(i) != 0 {
-			sum.Add(t, a)
-		} else {
+		if multiScalar[i] == 0 {
 			sum.Set(t)
+		} else {
+			sum.Add(t, precomp[multiScalar[i]])
 		}
 	}
-
 	c.Set(sum)
 }
 
