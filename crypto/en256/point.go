@@ -2,12 +2,12 @@ package en256
 
 import (
 	"crypto/cipher"
-	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
 	"io"
 	"math/big"
 
+	"github.com/MixinNetwork/mixin/domains/monero"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/group/mod"
 )
@@ -234,7 +234,7 @@ func hashToPoint(m []byte) (*big.Int, *big.Int) {
 		intCurveB.SetBytes(bufCurveB)
 	}
 
-	h := sha256.Sum256(m)
+	h := monero.Keccak256(m)
 	x := new(big.Int).SetBytes(h[:])
 	x.Mod(x, P)
 
