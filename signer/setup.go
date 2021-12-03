@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/group/mod"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
 	"github.com/drand/kyber/sign/bls"
@@ -33,7 +33,7 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 		return err
 	}
 
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	conf := &dkg.Config{
 		Suite:     suite,
 		Threshold: node.Threshold(),
@@ -82,7 +82,7 @@ func (node *Node) runDKG(ctx context.Context, protocol *dkg.Protocol) ([]byte, [
 
 func unmarshalPrivShare(b []byte) *share.PriShare {
 	var ps share.PriShare
-	ps.V = mod.NewInt64(0, bn256.Order).SetBytes(b[4:])
+	ps.V = mod.NewInt64(0, en256.Order).SetBytes(b[4:])
 	ps.I = int(binary.BigEndian.Uint32(b[:4]))
 	return &ps
 }

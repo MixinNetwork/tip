@@ -11,5 +11,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/unrolled/render v1.4.0
 	github.com/urfave/cli/v2 v2.3.0
+	go.dedis.ch/fixbuf v1.0.3 // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 )
