@@ -3,7 +3,7 @@ package crypto
 import (
 	"testing"
 
-	"github.com/drand/kyber/pairing/bn256"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/drand/kyber/util/random"
 	"github.com/stretchr/testify/assert"
 )
@@ -11,7 +11,7 @@ import (
 func TestDH(t *testing.T) {
 	assert := assert.New(t)
 
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	s1 := suite.Scalar().Pick(random.New())
 	p1 := suite.Point().Mul(s1, nil)
 	s2 := suite.Scalar().Pick(random.New())
@@ -25,15 +25,15 @@ func TestDH(t *testing.T) {
 	d2 = ecdh(p2, s2)
 	assert.NotEqual(d1, d2)
 
-	i1 := ecdh(bn256.NewSuiteG2().Point(), s1)
-	i2 := ecdh(bn256.NewSuiteG2().Point(), s2)
+	i1 := ecdh(en256.NewSuiteG2().Point(), s1)
+	i2 := ecdh(en256.NewSuiteG2().Point(), s2)
 	assert.NotEqual(i1, i2)
 }
 
 func TestEncDec(t *testing.T) {
 	assert := assert.New(t)
 
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	s1 := suite.Scalar().Pick(random.New())
 	p1 := suite.Point().Mul(s1, nil)
 	s2 := suite.Scalar().Pick(random.New())

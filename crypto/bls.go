@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
 )
 
@@ -15,12 +15,12 @@ const (
 )
 
 func Sign(scalar kyber.Scalar, msg []byte) ([]byte, error) {
-	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
+	scheme := bls.NewSchemeOnG1(en256.NewSuiteG2())
 	return scheme.Sign(scalar, msg)
 }
 
 func Verify(pub kyber.Point, msg, sig []byte) error {
-	scheme := bls.NewSchemeOnG1(bn256.NewSuiteG2())
+	scheme := bls.NewSchemeOnG1(en256.NewSuiteG2())
 	return scheme.Verify(pub, msg, sig)
 }
 
@@ -29,7 +29,7 @@ func PrivateKeyFromHex(s string) (kyber.Scalar, error) {
 	if err != nil {
 		return nil, err
 	}
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	scalar := suite.Scalar().SetBytes(seed)
 	return scalar, nil
 }
@@ -43,7 +43,7 @@ func PrivateKeyBytes(scalar kyber.Scalar) []byte {
 }
 
 func PublicKey(scalar kyber.Scalar) kyber.Point {
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	return suite.Point().Mul(scalar, nil)
 }
 
@@ -61,7 +61,7 @@ func PublicKeyBytes(point kyber.Point) []byte {
 }
 
 func PubKeyFromBytes(b []byte) (kyber.Point, error) {
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	point := suite.G2().Point()
 	err := point.UnmarshalBinary(b)
 	return point, err

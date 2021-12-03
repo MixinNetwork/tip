@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/MixinNetwork/tip/crypto"
-	"github.com/drand/kyber/pairing/bn256"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/drand/kyber/share/dkg"
 )
 
@@ -41,7 +41,7 @@ func decodeJustificationBundle(b []byte) (*dkg.JustificationBundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	for ; jl > 0; jl-- {
 		si, err := dec.ReadUint32()
 		if err != nil {

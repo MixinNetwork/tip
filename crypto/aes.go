@@ -6,14 +6,14 @@ import (
 	"crypto/rand"
 	"io"
 
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/util/random"
 	"golang.org/x/crypto/sha3"
 )
 
 func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	if point.Equal(suite.Point()) {
 		r := suite.Scalar().Pick(random.New())
 		point = point.Mul(r, nil)

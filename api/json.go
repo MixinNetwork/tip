@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 
 	"github.com/MixinNetwork/tip/crypto"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/MixinNetwork/tip/keeper"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
 	"github.com/drand/kyber/sign/tbls"
@@ -54,7 +54,7 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	if res == nil || res.Available < 1 {
 		return nil, "", ErrTooManyRequest
 	}
-	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
+	scheme := tbls.NewThresholdSchemeOnG1(en256.NewSuiteG2())
 	partial, err := scheme.Sign(priv, res.Assignor)
 	if err != nil {
 		panic(err)

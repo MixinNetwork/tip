@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/util/random"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ func TestGuard(t *testing.T) {
 	bs, _ := store.OpenBadger(context.Background(), conf)
 	defer bs.Close()
 
-	suite := bn256.NewSuiteBn256()
+	suite := en256.NewSuiteBn256()
 	signer := suite.Scalar().Pick(random.New())
 	node := crypto.PublicKey(signer)
 	user := suite.Scalar().Pick(random.New())
@@ -121,7 +121,7 @@ func TestAssigneeAndRotation(t *testing.T) {
 	bs, _ := store.OpenBadger(context.Background(), conf)
 	defer bs.Close()
 
-	suite := bn256.NewSuiteBn256()
+	suite := en256.NewSuiteBn256()
 	signer := suite.Scalar().Pick(random.New())
 	node := crypto.PublicKey(signer)
 

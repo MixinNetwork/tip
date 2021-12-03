@@ -451,13 +451,11 @@ func (p *pointGT) Equal(q kyber.Point) bool {
 }
 
 func (p *pointGT) Null() kyber.Point {
-	p.g.Set(gfP12Inf)
-	return p
+	panic("GT.Null")
 }
 
 func (p *pointGT) Base() kyber.Point {
-	p.g.Set(gfP12Gen)
-	return p
+	panic("GT.Base")
 }
 
 func (p *pointGT) Pick(rand cipher.Stream) kyber.Point {

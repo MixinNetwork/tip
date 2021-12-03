@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	"github.com/MixinNetwork/tip/crypto"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/sign/tbls"
 	"golang.org/x/crypto/sha3"
@@ -146,8 +146,8 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 	if len(partials) < len(c.commitments) {
 		return nil, evicted, fmt.Errorf("not enough partials %d %d", len(partials), len(c.commitments))
 	}
-	suite := bn256.NewSuiteG2()
-	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
+	suite := en256.NewSuiteG2()
+	scheme := tbls.NewThresholdSchemeOnG1(en256.NewSuiteG2())
 	poly := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
 	sig, err := scheme.Recover(poly, assignor, partials, len(c.commitments), len(c.signers))
 	if err != nil {

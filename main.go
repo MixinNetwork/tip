@@ -11,11 +11,11 @@ import (
 	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/config"
 	"github.com/MixinNetwork/tip/crypto"
+	"github.com/MixinNetwork/tip/crypto/en256"
 	"github.com/MixinNetwork/tip/messenger"
 	tip "github.com/MixinNetwork/tip/sdk/go"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/util/random"
 	"github.com/urfave/cli/v2"
@@ -183,7 +183,7 @@ func requestSetup(c *cli.Context) error {
 }
 
 func genKey(c *cli.Context) error {
-	suite := bn256.NewSuiteG2()
+	suite := en256.NewSuiteG2()
 	scalar := suite.Scalar().Pick(random.New())
 	point := suite.Point().Mul(scalar, nil)
 
