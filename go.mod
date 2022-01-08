@@ -6,12 +6,12 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/drand/kyber v1.1.7
-	github.com/fox-one/mixin-sdk-go v1.5.6
+	github.com/fox-one/mixin-sdk-go v1.5.7
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/pelletier/go-toml v1.9.4
 	github.com/unrolled/render v1.4.1
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b
+	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 )
 
 require (

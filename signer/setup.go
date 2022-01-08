@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
@@ -40,19 +39,17 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 		Longterm:  node.key,
 		Nonce:     node.getNonce(nonce),
 		Auth:      bls.NewSchemeOnG1(suite),
-		FastSync:  false,
+		FastSync:  true,
 		NewNodes:  node.signers,
 	}
 
 	node.board = node.NewBoard(ctx, nonce)
-	phaser := dkg.NewTimePhaserFunc(func(dkg.Phase) {
-		time.Sleep(node.period)
-	})
-	protocol, err := dkg.NewProtocol(conf, node.board, phaser, false)
+	protocol, err := dkg.NewProtocol(conf, node.board, node, false)
+	logger.Verbose("NewProtocol", protocol, err)
 	if err != nil {
 		return err
 	}
-	go phaser.Start()
+	node.phaser <- dkg.DealPhase
 	go func() error {
 		defer node.dkgDone()
 		pub, priv, err = node.runDKG(ctx, protocol)
@@ -63,6 +60,10 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 		return node.store.WritePoly(pub, priv)
 	}()
 	return nil
+}
+
+func (node *Node) NextPhase() chan dkg.Phase {
+	return node.phaser
 }
 
 func (node *Node) runDKG(ctx context.Context, protocol *dkg.Protocol) ([]byte, []byte, error) {

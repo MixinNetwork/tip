@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
@@ -18,9 +17,8 @@ import (
 )
 
 type Configuration struct {
-	Key            string   `toml:"key"`
-	Signers        []string `toml:"signers"`
-	TimeoutSeconds int      `toml:"timeout"`
+	Key     string   `toml:"key"`
+	Signers []string `toml:"signers"`
 }
 
 type Node struct {
@@ -36,7 +34,8 @@ type Node struct {
 	identity kyber.Point
 	index    int
 	signers  []dkg.Node
-	period   time.Duration
+	phaser   chan dkg.Phase
+	counter  int
 
 	share *share.PriShare
 	poly  []kyber.Point
@@ -48,6 +47,7 @@ func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage
 		messenger:    messenger,
 		setupActions: make(map[string]*SetupBundle),
 		dkgDone:      cancel,
+		phaser:       make(chan dkg.Phase),
 		index:        -1,
 	}
 	scalar, err := crypto.PrivateKeyFromHex(conf.Key)
@@ -77,7 +77,6 @@ func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage
 	if err != nil || !valid {
 		panic(fmt.Errorf("Group check failed %v %v", valid, err))
 	}
-	node.period = time.Second * time.Duration(conf.TimeoutSeconds)
 	if node.index < 0 {
 		panic(node.index)
 	}
@@ -151,17 +150,37 @@ func (node *Node) Run(ctx context.Context) error {
 				node.setup(ctx, nonce)
 			}
 			node.board.deals <- *db
+			node.counter += 1
+			logger.Verbose("DEAL COUNTER", node.counter)
+			if node.counter+1 == len(node.signers) {
+				node.phaser <- dkg.ResponsePhase
+				node.counter = 0
+			}
 		case MessageActionDKGResponse:
 			rb, err := decodeResponseBundle(msg.Data)
 			logger.Verbose("RESPONSE", err)
-			if err == nil && node.board != nil {
-				node.board.resps <- *rb
+			if err != nil || node.board == nil {
+				continue
+			}
+			node.board.resps <- *rb
+			node.counter += 1
+			logger.Verbose("RESPONSE COUNTER", node.counter)
+			if node.counter+1 == len(node.signers) {
+				node.phaser <- dkg.JustifPhase
+				node.counter = 0
 			}
 		case MessageActionDKGJustify:
 			jb, err := decodeJustificationBundle(msg.Data)
 			logger.Verbose("JUSTIFICATION", err)
-			if err == nil && node.board != nil {
-				node.board.justs <- *jb
+			if err != nil || node.board == nil {
+				continue
+			}
+			node.board.justs <- *jb
+			node.counter += 1
+			logger.Verbose("JUSTIFICATION COUNTER", node.counter)
+			if node.counter+1 == len(node.signers) {
+				node.phaser <- dkg.FinishPhase
+				node.counter = 0
 			}
 		}
 	}

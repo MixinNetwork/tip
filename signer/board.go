@@ -20,13 +20,12 @@ type Board struct {
 }
 
 func (node *Node) NewBoard(ctx context.Context, nonce uint64) *Board {
-	n := len(node.signers)
 	return &Board{
 		messenger: node.messenger,
 		nonce:     nonce,
-		deals:     make(chan dkg.DealBundle, n),
-		resps:     make(chan dkg.ResponseBundle, n),
-		justs:     make(chan dkg.JustificationBundle, n),
+		deals:     make(chan dkg.DealBundle),
+		resps:     make(chan dkg.ResponseBundle),
+		justs:     make(chan dkg.JustificationBundle),
 		ctx:       ctx,
 		key:       node.key,
 	}
