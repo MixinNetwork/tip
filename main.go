@@ -124,7 +124,6 @@ func runSigner(c *cli.Context) error {
 
 	node := signer.NewNode(ctx, cancel, store, messenger, conf.Node)
 	return node.Run(ctx)
-
 }
 
 func runAPI(c *cli.Context) error {
