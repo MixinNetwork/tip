@@ -18,6 +18,7 @@ import (
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber/sign/bls"
 	"github.com/drand/kyber/util/random"
+	"github.com/fox-one/mixin-sdk-go"
 	"github.com/urfave/cli/v2"
 )
 
@@ -170,15 +171,27 @@ func requestSetup(c *cli.Context) error {
 		panic(conf.Node.Key)
 	}
 
-	messenger, err := messenger.NewMixinMessenger(ctx, conf.Messenger)
+	s := &mixin.Keystore{
+		ClientID:   conf.Messenger.UserId,
+		SessionID:  conf.Messenger.SessionId,
+		PrivateKey: conf.Messenger.Key,
+	}
+
+	client, err := mixin.NewFromKeystore(s)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	msg := signer.MakeSetupMessage(ctx, key, nonce)
+	mex := hex.EncodeToString(msg)
 	data := base64.RawURLEncoding.EncodeToString(msg)
 	fmt.Println(data, len(msg))
-	return messenger.SendMessage(ctx, msg)
+	return client.SendMessage(ctx, &mixin.MessageRequest{
+		ConversationID: conf.Messenger.ConversationId,
+		Category:       mixin.MessageCategoryPlainText,
+		MessageID:      mixin.UniqueConversationID(mex, mex),
+		Data:           base64.RawURLEncoding.EncodeToString([]byte(data)),
+	})
 }
 
 func genKey(c *cli.Context) error {
