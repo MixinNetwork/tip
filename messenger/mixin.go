@@ -89,7 +89,7 @@ func (mm *MixinMessenger) buildMessage(receiver string, b []byte) *mixin.Message
 		ConversationID: mm.conversationId,
 		RecipientID:    receiver,
 		Category:       mixin.MessageCategoryPlainText,
-		MessageID:      uniqueMessageId(b),
+		MessageID:      uniqueMessageId(receiver, b),
 		Data:           base64.RawURLEncoding.EncodeToString([]byte(data)),
 	}
 }
@@ -106,8 +106,8 @@ func (mm *MixinMessenger) loopReceive(ctx context.Context) {
 }
 
 func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, size int) {
-	timer := time.NewTimer(period)
-	defer timer.Stop()
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
 
 	var batch []*mixin.MessageRequest
 	for {
@@ -121,7 +121,7 @@ func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, si
 				}
 				batch = nil
 			}
-		case <-timer.C:
+		case <-ticker.C:
 			if len(batch) > 0 {
 				err := mm.client.SendMessages(ctx, batch)
 				if err != nil {
@@ -130,10 +130,6 @@ func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, si
 				batch = nil
 			}
 		}
-		if !timer.Stop() {
-			<-timer.C
-		}
-		timer.Reset(period)
 	}
 }
 
@@ -168,7 +164,7 @@ func (mm *MixinMessenger) OnAckReceipt(ctx context.Context, msg *mixin.MessageVi
 	return nil
 }
 
-func uniqueMessageId(b []byte) string {
+func uniqueMessageId(receiver string, b []byte) string {
 	s := hex.EncodeToString(b)
-	return mixin.UniqueConversationID(s, s)
+	return mixin.UniqueConversationID(receiver, s)
 }
