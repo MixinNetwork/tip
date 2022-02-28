@@ -23,6 +23,7 @@ type MixinMessenger struct {
 	client         *mixin.Client
 	conversationId string
 	recv           chan []byte
+	send           chan *mixin.MessageRequest
 }
 
 func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMessenger, error) {
@@ -41,8 +42,10 @@ func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMes
 		client:         client,
 		conversationId: conf.ConversationId,
 		recv:           make(chan []byte, conf.Buffer),
+		send:           make(chan *mixin.MessageRequest, conf.Buffer),
 	}
-	go mm.loop(ctx)
+	go mm.loopReceive(ctx)
+	go mm.loopSend(ctx, time.Second, conf.Buffer)
 
 	return mm, nil
 }
@@ -61,29 +64,37 @@ func (mm *MixinMessenger) ReceiveMessage(ctx context.Context) (string, []byte, e
 }
 
 func (mm *MixinMessenger) BroadcastMessage(ctx context.Context, b []byte) error {
-	data := base64.RawURLEncoding.EncodeToString(b)
-	msg := &mixin.MessageRequest{
-		ConversationID: mm.conversationId,
-		Category:       mixin.MessageCategoryPlainText,
-		MessageID:      uniqueMessageId(b),
-		Data:           base64.RawURLEncoding.EncodeToString([]byte(data)),
-	}
+	msg := mm.buildMessage("", b)
 	return mm.client.SendMessage(ctx, msg)
 }
 
 func (mm *MixinMessenger) SendMessage(ctx context.Context, receiver string, b []byte) error {
+	msg := mm.buildMessage(receiver, b)
+	return mm.client.SendMessage(ctx, msg)
+}
+
+func (mm *MixinMessenger) QueueMessage(ctx context.Context, receiver string, b []byte) error {
+	msg := mm.buildMessage(receiver, b)
+	select {
+	case mm.send <- msg:
+		return nil
+	case <-ctx.Done():
+		return ErrorDone
+	}
+}
+
+func (mm *MixinMessenger) buildMessage(receiver string, b []byte) *mixin.MessageRequest {
 	data := base64.RawURLEncoding.EncodeToString(b)
-	msg := &mixin.MessageRequest{
+	return &mixin.MessageRequest{
 		ConversationID: mm.conversationId,
 		RecipientID:    receiver,
 		Category:       mixin.MessageCategoryPlainText,
 		MessageID:      uniqueMessageId(b),
 		Data:           base64.RawURLEncoding.EncodeToString([]byte(data)),
 	}
-	return mm.client.SendMessage(ctx, msg)
 }
 
-func (mm *MixinMessenger) loop(ctx context.Context) {
+func (mm *MixinMessenger) loopReceive(ctx context.Context) {
 	for {
 		err := mm.client.LoopBlaze(context.Background(), mm)
 		logger.Errorf("LoopBlaze %s\n", err)
@@ -91,6 +102,38 @@ func (mm *MixinMessenger) loop(ctx context.Context) {
 			break
 		}
 		time.Sleep(3 * time.Second)
+	}
+}
+
+func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, size int) {
+	timer := time.NewTimer(period)
+	defer timer.Stop()
+
+	var batch []*mixin.MessageRequest
+	for {
+		select {
+		case msg := <-mm.send:
+			batch = append(batch, msg)
+			if len(batch) > size {
+				err := mm.client.SendMessages(ctx, batch)
+				if err != nil {
+					logger.Errorf("SendMessages %s\n", err)
+				}
+				batch = nil
+			}
+		case <-timer.C:
+			if len(batch) > 0 {
+				err := mm.client.SendMessages(ctx, batch)
+				if err != nil {
+					logger.Errorf("SendMessages %s\n", err)
+				}
+				batch = nil
+			}
+		}
+		if !timer.Stop() {
+			<-timer.C
+		}
+		timer.Reset(period)
 	}
 }
 
