@@ -59,13 +59,20 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	if err != nil {
 		panic(err)
 	}
+	genesis, counter, err := store.WriteSignRequest(res.Assignor)
+	if err != nil {
+		logger.Debug("store.WriteSignRequest", err)
+		return nil, "", ErrUnknown
+	}
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, res.Nonce)
 	plain := append(buf, partial...)
 	plain = append(plain, res.Assignor...)
 	cipher := crypto.Encrypt(res.Identity, key, plain)
 	data := map[string]interface{}{
-		"cipher": hex.EncodeToString(cipher),
+		"genesis": genesis,
+		"counter": counter,
+		"cipher":  hex.EncodeToString(cipher),
 	}
 	b, _ := json.Marshal(data)
 	sig, _ := crypto.Sign(key, b)
