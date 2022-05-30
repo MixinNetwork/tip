@@ -114,7 +114,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 			panic(err)
 		}
 		dec := crypto.Decrypt(pub, key, enc)
-		if len(dec) != 128+66+8 {
+		if len(dec) != 8+66+128+8+8 {
 			evicted = append(evicted, s)
 			continue
 		}
@@ -122,7 +122,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 			evicted = append(evicted, s)
 			continue
 		}
-		p, a := dec[8:74], dec[74:]
+		p, a := dec[8:74], dec[74:202]
 		as := hex.EncodeToString(a)
 		pam[hex.EncodeToString(p)] = a
 		acm[as] = acm[as] + 1
