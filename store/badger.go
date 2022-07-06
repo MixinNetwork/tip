@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -20,7 +19,8 @@ const (
 	badgerKeyPrefixAssignor = "ASSIGNOR#"
 	badgerKeyPrefixLimit    = "LIMIT#"
 	badgerKeyPrefixNonce    = "NONCE#"
-	badgerKeyPrefixState    = "STATE#"
+	badgerKeyPrefixGenesis  = "GENESIS#"
+	badgerKeyPrefixCounter  = "COUNTER#"
 	maxUint64               = ^uint64(0)
 )
 
@@ -60,9 +60,8 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 			return nil
 		}
 
-		var buf [8]byte
-		binary.BigEndian.PutUint64(buf[:], now)
-		entry := badger.NewEntry(append(prefix, buf[:]...), []byte{1})
+		buf := uint64ToBytes(now)
+		entry := badger.NewEntry(append(prefix, buf...), []byte{1})
 		entry = entry.WithTTL(window * 2)
 		return txn.SetEntry(entry)
 	})
@@ -71,10 +70,10 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 
 func (bs *BadgerStorage) CheckEphemeralNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error) {
 	var valid bool
-	buf, now := make([]byte, 8), time.Now().UnixNano()
-	binary.BigEndian.PutUint64(buf, uint64(now))
-	val := append(buf, ephemeral...)
-	binary.BigEndian.PutUint64(buf, nonce)
+	now := time.Now().UnixNano()
+	val := uint64ToBytes(uint64(now))
+	val = append(val, ephemeral...)
+	buf := uint64ToBytes(nonce)
 	val = append(val, buf...)
 	key = append([]byte(badgerKeyPrefixNonce), key...)
 	err := bs.db.Update(func(txn *badger.Txn) error {
@@ -108,12 +107,15 @@ func (bs *BadgerStorage) CheckEphemeralNonce(key, ephemeral []byte, nonce uint64
 }
 
 func (bs *BadgerStorage) RotateEphemeralNonce(key, ephemeral []byte, nonce uint64) error {
-	buf, now := make([]byte, 8), time.Now().UnixNano()
-	binary.BigEndian.PutUint64(buf, uint64(now))
-	val := append(buf, ephemeral...)
-	binary.BigEndian.PutUint64(buf, nonce)
-	val = append(val, buf...)
+	now := time.Now().UnixNano()
 	key = append([]byte(badgerKeyPrefixNonce), key...)
+
+	val := uint64ToBytes(uint64(now))
+	val = append(val, ephemeral...)
+
+	buf := uint64ToBytes(nonce)
+	val = append(val, buf...)
+
 	return bs.db.Update(func(txn *badger.Txn) error {
 		return txn.Set(key, val)
 	})
@@ -202,6 +204,7 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 				return fmt.Errorf("invalid assignee")
 			}
 		}
+
 		old, err := readKey(txn, badgerKeyPrefixAssignee, key)
 		if err != nil {
 			return err
@@ -212,13 +215,28 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 				return err
 			}
 		}
+
 		lk := append([]byte(badgerKeyPrefixAssignee), key...)
 		err = txn.Set(lk, assignee)
 		if err != nil {
 			return err
 		}
 		rk := append([]byte(badgerKeyPrefixAssignor), assignee...)
-		return txn.Set(rk, key)
+		err = txn.Set(rk, key)
+		if err != nil {
+			return err
+		}
+
+		var counter uint64
+		cb, err := readKey(txn, badgerKeyPrefixCounter, key)
+		if err != nil {
+			return err
+		} else if cb != nil {
+			counter = binary.BigEndian.Uint64(cb)
+		}
+		ck := append([]byte(badgerKeyPrefixCounter), key...)
+		cv := uint64ToBytes(counter + 1)
+		return txn.Set(ck, cv)
 	})
 }
 
@@ -240,25 +258,25 @@ func (bs *BadgerStorage) WriteSignRequest(assignor []byte) (time.Time, int, erro
 	var counter int
 	var genesis time.Time
 	err := bs.db.Update(func(txn *badger.Txn) error {
-		key := append([]byte(badgerKeyPrefixState), assignor...)
-		item, err := txn.Get(key)
-		if err == badger.ErrKeyNotFound {
-			genesis = time.Now()
-			counter = 0
-		} else if err != nil {
+		cb, err := readKey(txn, badgerKeyPrefixCounter, assignor)
+		if err != nil {
 			return err
-		} else if val, err := item.ValueCopy(nil); err != nil {
-			return err
-		} else if len(val) != 16 {
-			panic(hex.EncodeToString(val))
-		} else {
-			genesis = time.Unix(0, int64(binary.BigEndian.Uint64(val[:8])))
-			counter = int(binary.BigEndian.Uint64(val[8:]))
+		} else if cb != nil {
+			counter = int(binary.BigEndian.Uint64(cb))
 		}
-		buf := make([]byte, 16)
-		binary.BigEndian.PutUint64(buf[:8], uint64(genesis.UnixNano()))
-		binary.BigEndian.PutUint64(buf[8:], uint64(counter+1))
-		return txn.Set(key, buf)
+
+		old, err := readKey(txn, badgerKeyPrefixGenesis, assignor)
+		if err != nil {
+			return err
+		} else if old != nil {
+			genesis = time.Unix(0, int64(binary.BigEndian.Uint64(old)))
+			return nil
+		}
+
+		genesis = time.Now()
+		key := append([]byte(badgerKeyPrefixGenesis), assignor...)
+		val := uint64ToBytes(uint64(genesis.UnixNano()))
+		return txn.Set(key, val)
 	})
 	return genesis, counter, err
 }
@@ -287,4 +305,10 @@ func readKey(txn *badger.Txn, prefix string, key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return item.ValueCopy(nil)
+}
+
+func uint64ToBytes(i uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, i)
+	return buf
 }

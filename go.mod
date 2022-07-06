@@ -9,6 +9,7 @@ require (
 	github.com/fox-one/mixin-sdk-go v1.5.7
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/pelletier/go-toml v1.9.4
+	github.com/stretchr/testify v1.7.0
 	github.com/unrolled/render v1.4.1
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
@@ -18,6 +19,7 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fox-one/msgpack v1.0.0 // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/klauspost/compress v1.12.3 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
@@ -45,4 +48,5 @@ require (
 	golang.org/x/sys v0.0.0-20211109184856-51b60fd695b3 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
