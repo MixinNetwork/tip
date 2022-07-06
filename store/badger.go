@@ -263,6 +263,8 @@ func (bs *BadgerStorage) WriteSignRequest(assignor []byte) (time.Time, int, erro
 			return err
 		} else if cb != nil {
 			counter = int(binary.BigEndian.Uint64(cb))
+		} else {
+			counter = 1
 		}
 
 		old, err := readKey(txn, badgerKeyPrefixGenesis, assignor)
@@ -270,12 +272,19 @@ func (bs *BadgerStorage) WriteSignRequest(assignor []byte) (time.Time, int, erro
 			return err
 		} else if old != nil {
 			genesis = time.Unix(0, int64(binary.BigEndian.Uint64(old)))
-			return nil
+		} else {
+			genesis = time.Now()
 		}
 
-		genesis = time.Now()
 		key := append([]byte(badgerKeyPrefixGenesis), assignor...)
 		val := uint64ToBytes(uint64(genesis.UnixNano()))
+		err = txn.Set(key, val)
+		if err != nil {
+			return err
+		}
+
+		key = append([]byte(badgerKeyPrefixCounter), assignor...)
+		val = uint64ToBytes(uint64(counter))
 		return txn.Set(key, val)
 	})
 	return genesis, counter, err
