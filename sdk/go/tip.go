@@ -199,6 +199,7 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotat
 	cipher := crypto.Encrypt(spub, key, b)
 	sig, _ := crypto.Sign(key, msg)
 	b, _ = json.Marshal(map[string]interface{}{
+		"action":    "SIGN",
 		"identity":  crypto.PublicKeyString(pkey),
 		"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),
 		"signature": hex.EncodeToString(sig),
