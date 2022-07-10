@@ -54,34 +54,41 @@ func (hdr *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "POST" {
-		hdr.handleSign(w, r)
+		hdr.handle(w, r)
 		return
 	}
 
-	hdr.handleInfo(w, r)
+	data, sig := info(hdr.conf.Key, hdr.conf.Signers, hdr.conf.Poly)
+	hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
 }
 
-func (hdr *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
+func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
 	var body SignRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
 		hdr.error(w, r, http.StatusBadRequest)
 		return
 	}
-	data, sig, err := sign(hdr.conf.Key, hdr.store, &body, hdr.conf.Share)
-	if err == ErrTooManyRequest {
-		hdr.error(w, r, http.StatusTooManyRequests)
-		return
-	} else if err != nil {
-		hdr.error(w, r, http.StatusInternalServerError)
-		return
+	if body.Action == "SIGN" {
+		data, sig, err := sign(hdr.conf.Key, hdr.store, &body, hdr.conf.Share)
+		if err == ErrTooManyRequest {
+			hdr.error(w, r, http.StatusTooManyRequests)
+			return
+		} else if err != nil {
+			hdr.error(w, r, http.StatusInternalServerError)
+			return
+		}
+		hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
+	} else if body.Action == "WATCH" {
+		genesis, counter, err := watch(hdr.store, body.Watcher)
+		if err != nil {
+			hdr.error(w, r, http.StatusInternalServerError)
+			return
+		}
+		hdr.json(w, r, http.StatusOK, map[string]interface{}{"genesis": genesis, "counter": counter})
+	} else {
+		hdr.error(w, r, http.StatusBadRequest)
 	}
-	hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
-}
-
-func (hdr *Handler) handleInfo(w http.ResponseWriter, r *http.Request) {
-	data, sig := info(hdr.conf.Key, hdr.conf.Signers, hdr.conf.Poly)
-	hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
 }
 
 func (hdr *Handler) error(w http.ResponseWriter, r *http.Request, code int) {

@@ -17,6 +17,7 @@ const (
 
 	badgerKeyPrefixAssignee = "ASSIGNEE#"
 	badgerKeyPrefixAssignor = "ASSIGNOR#"
+	badgerKeyPrefixWatcher  = "WATCHER#"
 	badgerKeyPrefixLimit    = "LIMIT#"
 	badgerKeyPrefixNonce    = "NONCE#"
 	badgerKeyPrefixGenesis  = "GENESIS#"
@@ -254,7 +255,33 @@ func (bs *BadgerStorage) ReadAssignor(key []byte) ([]byte, error) {
 	return readKey(txn, badgerKeyPrefixAssignor, key)
 }
 
-func (bs *BadgerStorage) WriteSignRequest(assignor []byte) (time.Time, int, error) {
+func (bs *BadgerStorage) Watch(key []byte) (time.Time, int, error) {
+	txn := bs.db.NewTransaction(false)
+	defer txn.Discard()
+
+	assignor, err := readKey(txn, badgerKeyPrefixWatcher, key)
+	if err != nil {
+		return time.Time{}, 0, err
+	} else if assignor == nil {
+		return time.Time{}, 0, nil
+	}
+
+	gb, err := readKey(txn, badgerKeyPrefixGenesis, assignor)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
+	genesis := time.Unix(0, int64(binary.BigEndian.Uint64(gb)))
+
+	cb, err := readKey(txn, badgerKeyPrefixCounter, assignor)
+	if err != nil {
+		return time.Time{}, 0, err
+	}
+	counter := int(binary.BigEndian.Uint64(cb))
+
+	return genesis, counter, nil
+}
+
+func (bs *BadgerStorage) WriteSignRequest(assignor, watcher []byte) (time.Time, int, error) {
 	var counter int
 	var genesis time.Time
 	err := bs.db.Update(func(txn *badger.Txn) error {
@@ -285,7 +312,19 @@ func (bs *BadgerStorage) WriteSignRequest(assignor []byte) (time.Time, int, erro
 
 		key = append([]byte(badgerKeyPrefixCounter), assignor...)
 		val = uint64ToBytes(uint64(counter))
-		return txn.Set(key, val)
+		err = txn.Set(key, val)
+		if err != nil {
+			return err
+		}
+
+		old, err = readKey(txn, badgerKeyPrefixWatcher, watcher)
+		if err != nil {
+			return err
+		} else if old != nil && bytes.Compare(old, assignor) != 0 {
+			return fmt.Errorf("invalid watcher %x", watcher)
+		}
+		key = append([]byte(badgerKeyPrefixWatcher), watcher...)
+		return txn.Set(key, assignor)
 	})
 	return genesis, counter, err
 }

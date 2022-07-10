@@ -1,9 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/keeper"
@@ -17,9 +20,11 @@ import (
 )
 
 type SignRequest struct {
-	Data      string `json:"data"`
+	Action    string `json:"action"`
+	Watcher   string `json:"watcher"`
 	Identity  string `json:"identity"`
 	Signature string `json:"signature"`
+	Data      string `json:"data"`
 }
 
 func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, string) {
@@ -45,6 +50,15 @@ func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, 
 	return data, hex.EncodeToString(sig)
 }
 
+func watch(store store.Storage, watcher string) (time.Time, int, error) {
+	key, _ := hex.DecodeString(watcher)
+	if len(key) != 32 {
+		return time.Time{}, 0, fmt.Errorf("invalid watcher %s", watcher)
+	}
+
+	return store.Watch(key)
+}
+
 func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
 	res, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
 	if err != nil {
@@ -54,12 +68,16 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	if res == nil || res.Available < 1 {
 		return nil, "", ErrTooManyRequest
 	}
+	watcher, _ := hex.DecodeString(body.Watcher)
+	if bytes.Compare(res.Watcher, watcher) != 0 {
+		return nil, "", fmt.Errorf("invalid watcher %s", body.Watcher)
+	}
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	partial, err := scheme.Sign(priv, res.Assignor)
 	if err != nil {
 		panic(err)
 	}
-	genesis, counter, err := store.WriteSignRequest(res.Assignor)
+	genesis, counter, err := store.WriteSignRequest(res.Assignor, res.Watcher)
 	if err != nil {
 		logger.Debug("store.WriteSignRequest", err)
 		return nil, "", ErrUnknown

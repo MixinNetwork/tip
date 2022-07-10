@@ -28,6 +28,7 @@ type Response struct {
 	Nonce     uint64
 	Identity  kyber.Point
 	Assignor  []byte
+	Watcher   []byte
 }
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (*Response, error) {
@@ -117,11 +118,18 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 				return nil, err
 			}
 		}
+
+		watcher, _ := hex.DecodeString(body.Watcher)
+		if len(watcher) != 32 {
+			return nil, fmt.Errorf("invalid watcher %s", body.Watcher)
+		}
+
 		return &Response{
 			Available: available,
 			Nonce:     nonce,
 			Identity:  pub,
 			Assignor:  assignor,
+			Watcher:   watcher,
 		}, nil
 	}
 	_, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
@@ -180,4 +188,7 @@ type body struct {
 	// e.g. when they cooperate with others to generate a non-random
 	// ephemeral to replace their on-device random one
 	Rotate string `json:"rotate"`
+
+	// the key to watch the identity state
+	Watcher string `json:"watcher"`
 }
