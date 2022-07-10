@@ -88,6 +88,10 @@ func main() {
 						Name:  "assignee",
 						Usage: "The identity assignee",
 					},
+					&cli.StringFlag{
+						Name:  "watcher",
+						Usage: "The state watcher",
+					},
 					&cli.Int64Flag{
 						Name:  "nonce",
 						Usage: "The nonce",
@@ -235,7 +239,8 @@ func requestSign(c *cli.Context) error {
 	nonce := c.Int64("nonce")
 	rotate := c.String("rotate")
 	assignee := c.String("assignee")
-	sig, evicted, err := client.Sign(key, ephemeral, nonce, grace, rotate, assignee)
+	watcher := c.String("watcher")
+	sig, evicted, err := client.Sign(key, ephemeral, nonce, grace, rotate, assignee, watcher)
 	if err != nil {
 		return err
 	}

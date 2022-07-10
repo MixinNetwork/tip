@@ -72,7 +72,7 @@ func NewClient(conf *Configuration) (*Client, []*signerPair, error) {
 	return cli, evicted, nil
 }
 
-func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee string) ([]byte, []*signerPair, error) {
+func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee, watcher string) ([]byte, []*signerPair, error) {
 	key, err := crypto.PrivateKeyFromHex(ks)
 	if err != nil {
 		return nil, nil, err
@@ -94,7 +94,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 	pam := make(map[string][]byte)
 	acm := make(map[string]int)
 	for _, s := range c.signers {
-		data := sign(key, s.Identity, ephemeral, uint64(nonce), uint64(grace), rotate, assignee)
+		data := sign(key, s.Identity, ephemeral, uint64(nonce), uint64(grace), rotate, assignee, watcher)
 		res, err := request(s, "POST", data)
 		if err != nil {
 			evicted = append(evicted, s)
@@ -160,7 +160,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 	return sig, evicted, nil
 }
 
-func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotate, assignee string) []byte {
+func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotate, assignee, watcher string) []byte {
 	pkey := crypto.PublicKey(key)
 	esum := sha3.Sum256(append([]byte(ephemeral), nodeId...))
 	msg := crypto.PublicKeyBytes(pkey)
@@ -173,6 +173,7 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotat
 	data := map[string]interface{}{
 		"identity":  crypto.PublicKeyString(pkey),
 		"ephemeral": hex.EncodeToString(esum[:]),
+		"watcher":   watcher,
 		"nonce":     nonce,
 		"grace":     grace,
 	}
@@ -201,6 +202,7 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotat
 		"identity":  crypto.PublicKeyString(pkey),
 		"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),
 		"signature": hex.EncodeToString(sig),
+		"watcher":   watcher,
 	})
 	return b
 }
