@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -158,10 +159,12 @@ func TestAssigneeAndRotation(t *testing.T) {
 }
 
 func makeTestRequest(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64) (string, string) {
-	return makeTestRequestWithAssigneeAndRotation(user, signer, ephmr, rtt, nonce, grace, "", "")
+	seed := make([]byte, 32)
+	rand.Read(seed)
+	return makeTestRequestWithAssigneeAndRotation(user, signer, ephmr, rtt, nonce, grace, "", "", hex.EncodeToString(seed))
 }
 
-func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64, assignee, rotation string) (string, string) {
+func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64, assignee, rotation, watcher string) (string, string) {
 	pkey := crypto.PublicKey(user)
 	msg := crypto.PublicKeyBytes(pkey)
 	msg = append(msg, ephmr...)
@@ -175,6 +178,7 @@ func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Poin
 		"ephemeral": hex.EncodeToString(ephmr),
 		"nonce":     nonce,
 		"grace":     grace,
+		"watcher":   watcher,
 	}
 	if rtt != nil {
 		msg = append(msg, rtt[:]...)
