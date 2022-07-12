@@ -45,7 +45,7 @@ func Encrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 		panic(err)
 	}
 	nonce := make([]byte, aead.NonceSize())
-	rand.Read(nonce)
+	_, err = rand.Read(nonce)
 	if err != nil {
 		panic(err)
 	}
