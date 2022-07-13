@@ -37,7 +37,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return nil, fmt.Errorf("invalid data %s", data)
 	}
 	pub, err := crypto.PubKeyFromBase58(identity)
-	if err != nil || len(pub) < 32 {
+	if err != nil {
 		return nil, fmt.Errorf("invalid idenity %s", identity)
 	}
 	b = crypto.Decrypt(pub, priv, b)
