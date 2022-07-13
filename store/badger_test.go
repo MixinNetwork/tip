@@ -2,10 +2,14 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/MixinNetwork/tip/crypto"
+	"github.com/drand/kyber/pairing/bn256"
+	"github.com/drand/kyber/util/random"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -170,6 +174,40 @@ func TestBadgerAssignee(t *testing.T) {
 	or, err = bs.ReadAssignor(c)
 	assert.Nil(err)
 	assert.Nil(or)
+}
+
+func TestBadgerWatch(t *testing.T) {
+	assert := assert.New(t)
+	bs := testBadgerStore()
+	defer bs.Close()
+
+	suite := bn256.NewSuiteBn256()
+	user := suite.Scalar().Pick(random.New())
+	identity := crypto.PublicKeyBytes(crypto.PublicKey(user))
+	watcher := make([]byte, 32)
+	rand.Read(watcher)
+	genesis, counter, err := bs.WriteSignRequest(identity, watcher)
+	assert.Nil(err)
+	assert.Equal(1, counter)
+	assert.True(genesis.Add(time.Minute).After(time.Now()))
+	genesisExist, counterExist, err := bs.Watch(watcher)
+	assert.Nil(err)
+	assert.Equal(counter, counterExist)
+	assert.True(genesis.Equal(genesisExist))
+	genesis, counter, err = bs.WriteSignRequest(identity, watcher)
+	assert.Nil(err)
+	assert.Equal(1, counter)
+	assert.True(genesis.Add(time.Minute).After(time.Now()))
+	genesisExist, counterExist, err = bs.Watch(watcher)
+	assert.Nil(err)
+	assert.Equal(counter, counterExist)
+	assert.True(genesis.Equal(genesisExist))
+	err = bs.WriteAssignee(identity, identity)
+	assert.Nil(err)
+	genesisExist, counterExist, err = bs.Watch(watcher)
+	assert.Nil(err)
+	assert.Equal(2, counterExist)
+	assert.True(genesis.Equal(genesisExist))
 }
 
 func testBadgerStore() *BadgerStorage {
