@@ -145,9 +145,19 @@ func TestGuard(t *testing.T) {
 	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1040, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.Nil(err)
+	assert.NotNil(res)
 	assignee, err = bs.ReadAssignee(crypto.PublicKeyBytes(userPub))
 	assert.Nil(err)
 	assert.Len(assignee, 128)
+	valid, err := bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1040, time.Duration(grace))
+	assert.Nil(err)
+	assert.False(valid)
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1041, time.Duration(grace))
+	assert.Nil(err)
+	assert.True(valid)
+	_, counter, err := bs.Watch(watcherSeed)
+	assert.Nil(err)
+	assert.Equal(2, counter)
 }
 
 func TestAssigneeAndRotation(t *testing.T) {
