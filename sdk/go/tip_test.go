@@ -5,17 +5,63 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTip(t *testing.T) {
-	// assert := assert.New(t)
-	testRunServer(7025)
+	assert := assert.New(t)
+	for _, port := range []int{7021, 7022, 7023, 7024} {
+		go testRunServer(port)
+	}
+
+	time.Sleep(time.Second)
+	client, _, err := NewClient(conf)
+	assert.Nil(err)
+	key := "8bee954d5315684caa46d78fb8456a165bdd0cb44643d335a6b15c21d8c1872b"
+	ephemeral := "2b5a6b0cb9576ea218d081baa14d2cea82a6839165a29b3bdfc6ef8582b0ce5a"
+	watcher := "2b5a6b0cb9576ea218d081baa14d2cea82a6839165a29b3bdfc6ef8582b0ce5a"
+	grace := int64(time.Hour * 24 * 128)
+	nonce := 123
+	sig, evicted, err := client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
+	assert.Nil(err)
+	assert.Len(evicted, 0)
+	log.Println(hex.EncodeToString(sig))
+}
+
+func testConfigurationJSON() *Configuration {
+	return &Configuration{
+		Commitments: []string{
+			"5JJGU8uy7SsA7shL8eWZLiBHKaGUe61DSaT9WMKvmkuU3gJHK25yzgxqJtFqFLgE93b2AGjpF9xoUzyr2ypnPKABbsm7pUWdnLJFVMGSuCd7RP9fN67KH1ELgWER5ZGAiDyQZF67hGshCnSTHoMawnJ8QzBnjECSsmWgWQu6i8qwBY6C4ncWgX",
+			"5JavWMMmNjfX2sCu3ixRksmd5npiZekjhW76dkn1wgToJzSouZgy7HaiKAw4CHenKzmU5Tn41JY3eJbK6TK1m328CwabL8u9ydKRKFBcqXbQHpdRc5DYUoqbJogqXdiR8LtEzBMVtKnMicK7RZpuY2QcoLqZNxQ3yW51eG7R4mexDoyfLLXf86",
+			"5Jm9wNExYE3BcjYoHagvzPwWgK9WtAVf9JEwyQugDfT88GmZZr6Ztb9tALV4cYamauNunuVzaCmmZHmhK9yztGWyAKtoe6VeTfEdUzLBhXq3ZQznxxJrEbADKN1GZFmx7xcRVe7iL2AxuwDRkXcgBiTNL4afNLmQ3tiW3t8VnpwxBoxzahoSaY",
+		},
+		Signers: []*signerPair{
+			&signerPair{
+				Identity: "5HrRVnj6PdfxKojB44te1XqhDSCexUxSognLi96SVx5B6VdnKkbyvUGcpkdQodg9rKgxM5v61ypmbJNGVWJTuacKUSZQfkq1mnc6P4XybemuXYmwSd5g2zkaArPc8VDTU5eEPuvgguSD8cnEgnMZzW7rJfaWoJU1DW6k2ujzUx15EjAG3WDTeG",
+				API:      "http://127.0.0.1:7021",
+			},
+			&signerPair{
+				Identity: "5HzufHDbh8kUj3oBiYWeEe4wamNMmQ4BZ5uZULxGsyKYULpWLUdzzBb73EExRDgUxZD5vu6iA61ds7QGSjeCWazSmpXv7sMaHfizSnHjxeoEy1TumWVqGJhtAAYwAJPzUbTdyzEGz5r9hRSYFAmHkhwCwLi8BoSk8V2scv6r7LdfphGbXSWSAV",
+				API:      "http://127.0.0.1:7022",
+			},
+			&signerPair{
+				Identity: "5JRrcBgsnUVr8D7tdTHX8nZAbkpPD4C5TS82KEbBMiV3inVp1vSu4gBwB1WwhQFguGbmkgrvA2vmtfY6GXhyFnh4SRoEQT2jVNTsk91pcPUaZ8nQcEdDAUjKXCTFi6TPDYPYPUsAK67kUXEtyNocsYUijKdF9pGRKUk92Rk7iRuJ3eqADYH7NB",
+				API:      "http://127.0.0.1:7023",
+			},
+			&signerPair{
+				Identity: "5Jt4ztqknKHcAw13RALYx2mXT9qkKKJTvrU7W7HNcF7vGKxzh5tvSqQvrY4aZCVqzk46DV8X69qudryZsjyKjzLJMjyRMYiDoQY7WZvNk874cibXAoZrUbp7Eyc8DgNLnPycisLbNofh3iJpKMK2qpsQH7AsFkAMdhH8KLFoBGruTs1XcevoC1",
+				API:      "http://127.0.0.1:7024",
+			},
+		},
+	}
 }
 
 func testRunServer(port int) error {
