@@ -239,10 +239,16 @@ func TestGuard(t *testing.T) {
 	res, err = Guard(bs, signer, liIdentity, signature, data)
 	assert.Nil(err)
 	assert.NotNil(res)
+	// test li pin
 	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 115, grace, "", "", hex.EncodeToString(liWatcher))
 	res, err = Guard(bs, signer, liNewIdentity, signature, data)
 	assert.Nil(err)
 	assert.NotNil(res)
+	// pin should have watcher
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 115, grace, "", "", "")
+	res, err = Guard(bs, signer, liNewIdentity, signature, data)
+	assert.Nil(err)
+	assert.Nil(res)
 }
 
 func TestAssigneeAndRotation(t *testing.T) {
