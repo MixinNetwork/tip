@@ -69,7 +69,8 @@ func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
 		hdr.error(w, r, http.StatusBadRequest)
 		return
 	}
-	if body.Action == "SIGN" {
+	switch body.Action {
+	case "SIGN":
 		data, sig, err := sign(hdr.conf.Key, hdr.store, &body, hdr.conf.Share)
 		if err == ErrTooManyRequest {
 			hdr.error(w, r, http.StatusTooManyRequests)
@@ -79,14 +80,14 @@ func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
-	} else if body.Action == "WATCH" {
+	case "WATCH":
 		genesis, counter, err := watch(hdr.store, body.Watcher)
 		if err != nil {
 			hdr.error(w, r, http.StatusInternalServerError)
 			return
 		}
 		hdr.json(w, r, http.StatusOK, map[string]interface{}{"genesis": genesis, "counter": counter})
-	} else {
+	default:
 		hdr.error(w, r, http.StatusBadRequest)
 	}
 }

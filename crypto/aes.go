@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"io"
 
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
@@ -46,7 +45,7 @@ func Encrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 		panic(err)
 	}
 	nonce := make([]byte, aead.NonceSize())
-	_, err = io.ReadFull(rand.Reader, nonce)
+	_, err = rand.Read(nonce)
 	if err != nil {
 		panic(err)
 	}
