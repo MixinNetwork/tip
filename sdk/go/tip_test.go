@@ -22,7 +22,7 @@ func TestTip(t *testing.T) {
 		go testRunServer(port)
 	}
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 	client, evicted, err := NewClient(testConfigurationJSON())
 	assert.Nil(err)
 	assert.Len(evicted, 0)
@@ -32,6 +32,16 @@ func TestTip(t *testing.T) {
 	grace := int64(time.Hour * 24 * 128)
 	var nonce int64 = 123
 	sig, evicted, err := client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
+	assert.Nil(err)
+	assert.Len(evicted, 0)
+	log.Println(hex.EncodeToString(sig))
+
+	nonce = 123
+	sig, evicted, err = client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
+	assert.NotNil(err)
+
+	nonce = 1234
+	sig, evicted, err = client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
 	assert.Nil(err)
 	assert.Len(evicted, 0)
 	log.Println(hex.EncodeToString(sig))
