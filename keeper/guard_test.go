@@ -227,6 +227,22 @@ func TestGuard(t *testing.T) {
 	res, err = Guard(bs, signer, liIdentity, signature, data)
 	assert.NotNil(err)
 	assert.Contains(err.Error(), "invalid assignee")
+	// update li pin
+	liNew := suite.Scalar().Pick(random.New())
+	liNewPub := crypto.PublicKey(liNew)
+	liNewIdentity := crypto.PublicKeyString(liNewPub)
+	assignee = crypto.PublicKeyBytes(liNewPub)
+	sig, err = crypto.Sign(liNew, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 110, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, liIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 115, grace, "", "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liNewIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
 }
 
 func TestAssigneeAndRotation(t *testing.T) {
