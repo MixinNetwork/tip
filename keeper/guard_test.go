@@ -200,6 +200,7 @@ func TestGuard(t *testing.T) {
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.Nil(err)
 	assert.NotNil(res)
+	// test user pin
 	signature, data = makeTestRequestWithAssigneeAndRotation(newUser, node, ephmr, nil, 1046, grace, "", "", hex.EncodeToString(watcherSeed))
 	res, err = Guard(bs, signer, newIdentity, signature, data)
 	assert.Nil(err)
@@ -207,6 +208,7 @@ func TestGuard(t *testing.T) {
 	_, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(3, counter)
+	// test user old pin
 	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1047, grace, "", "", hex.EncodeToString(watcherSeed))
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.NotNil(err)
