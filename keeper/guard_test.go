@@ -245,7 +245,13 @@ func TestGuard(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(res)
 	// pin should have watcher
-	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 115, grace, "", "", "")
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 117, grace, "", "", "")
+	res, err = Guard(bs, signer, liNewIdentity, signature, data)
+	assert.NotNil(err)
+	assert.Nil(res)
+	// invalid ephmr
+	ephmr = crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 119, grace, "", "", hex.EncodeToString(liWatcher))
 	res, err = Guard(bs, signer, liNewIdentity, signature, data)
 	assert.Nil(err)
 	assert.Nil(res)
