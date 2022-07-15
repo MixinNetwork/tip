@@ -31,7 +31,8 @@ func TestGuard(t *testing.T) {
 	signer := suite.Scalar().Pick(random.New())
 	node := crypto.PublicKey(signer)
 	user := suite.Scalar().Pick(random.New())
-	identity := crypto.PublicKeyString(crypto.PublicKey(user))
+	userPub := crypto.PublicKey(user)
+	identity := crypto.PublicKeyString(userPub)
 
 	ephmr := crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
 	grace := uint64(time.Hour * 24 * 128)
@@ -130,8 +131,6 @@ func TestGuard(t *testing.T) {
 	assert.NotNil(err)
 	assert.Contains(err.Error(), "invalid assignee ")
 	// valid assignee
-	userPub, err := crypto.PubKeyFromBase58(identity)
-	assert.Nil(err)
 	assignee := crypto.PublicKeyBytes(userPub)
 	sig, err := crypto.Sign(user, assignee)
 	assert.Nil(err)
@@ -142,6 +141,10 @@ func TestGuard(t *testing.T) {
 	watcherSeed := make([]byte, 32)
 	_, err = rand.Read(watcherSeed)
 	assert.Nil(err)
+	assignee = crypto.PublicKeyBytes(userPub)
+	sig, err = crypto.Sign(user, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
 	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1040, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.Nil(err)
@@ -161,7 +164,7 @@ func TestGuard(t *testing.T) {
 	_, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(1, counter)
-	// valid assignee counter + 1
+	// valid existing assignee counter + 1
 	assignee = crypto.PublicKeyBytes(userPub)
 	sig, err = crypto.Sign(user, assignee)
 	assert.Nil(err)
@@ -185,6 +188,45 @@ func TestGuard(t *testing.T) {
 	_, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(2, counter)
+	// valid new assignee counter + 1
+	newUser := suite.Scalar().Pick(random.New())
+	newUserPub := crypto.PublicKey(newUser)
+	newIdentity := crypto.PublicKeyString(newUserPub)
+	assignee = crypto.PublicKeyBytes(newUserPub)
+	sig, err = crypto.Sign(newUser, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1045, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	signature, data = makeTestRequestWithAssigneeAndRotation(newUser, node, ephmr, nil, 1046, grace, "", "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, newIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	_, counter, err = bs.Watch(watcherSeed)
+	assert.Nil(err)
+	assert.Equal(3, counter)
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1047, grace, "", "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid assignee")
+	// setup li pin
+	liWatcher := make([]byte, 32)
+	_, err = rand.Read(liWatcher)
+	assert.Nil(err)
+	li := suite.Scalar().Pick(random.New())
+	liPub := crypto.PublicKey(li)
+	liIdentity := crypto.PublicKeyString(liPub)
+	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 100, grace, "", "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	// update li' pin with wrong assignee
+	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 105, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liIdentity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid assignee")
 }
 
 func TestAssigneeAndRotation(t *testing.T) {
@@ -258,10 +300,8 @@ func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Poin
 		data["rotate"] = hex.EncodeToString(rtt)
 	}
 	if assignee != "" {
-		userPub := crypto.PublicKeyBytes(crypto.PublicKey(user))
-		msg = append(msg, userPub...)
-		sig, _ := crypto.Sign(user, userPub)
-		msg = append(msg, sig...)
+		buf, _ := hex.DecodeString(assignee)
+		msg = append(msg, buf...)
 		data["assignee"] = assignee
 	}
 	b, _ := json.Marshal(data)
