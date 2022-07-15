@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -202,9 +203,10 @@ func TestGuard(t *testing.T) {
 	assert.NotNil(res)
 	// test user pin
 	signature, data = makeTestRequestWithAssigneeAndRotation(newUser, node, ephmr, nil, 1046, grace, "", "", hex.EncodeToString(watcherSeed))
-	res, err = Guard(bs, signer, newIdentity, signature, data)
+	resNew, err := Guard(bs, signer, newIdentity, signature, data)
 	assert.Nil(err)
-	assert.NotNil(res)
+	assert.NotNil(resNew)
+	assert.True(bytes.Compare(res.Assignor, resNew.Assignor) == 0)
 	_, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(3, counter)
