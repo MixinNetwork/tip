@@ -63,6 +63,16 @@ func (mm *MixinMessenger) ReceiveMessage(ctx context.Context) (string, []byte, e
 	}
 }
 
+func (mm *MixinMessenger) BroadcastPlainMessage(ctx context.Context, data string) error {
+	msg := &mixin.MessageRequest{
+		ConversationID: mm.conversationId,
+		Category:       mixin.MessageCategoryPlainText,
+		MessageID:      uniqueMessageId("", []byte(data)),
+		Data:           base64.RawURLEncoding.EncodeToString([]byte(data)),
+	}
+	return mm.client.SendMessage(ctx, msg)
+}
+
 func (mm *MixinMessenger) BroadcastMessage(ctx context.Context, b []byte) error {
 	msg := mm.buildMessage("", b)
 	return mm.client.SendMessage(ctx, msg)
