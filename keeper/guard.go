@@ -38,7 +38,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	}
 	pub, err := crypto.PubKeyFromBase58(identity)
 	if err != nil {
-		return nil, fmt.Errorf("invalid idenity %s", identity)
+		return nil, fmt.Errorf("invalid identity %s", identity)
 	}
 	b = crypto.Decrypt(pub, priv, b)
 
@@ -48,7 +48,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return nil, fmt.Errorf("invalid data %s", string(b))
 	}
 	if body.Identity != identity {
-		return nil, fmt.Errorf("invalid idenity %s", identity)
+		return nil, fmt.Errorf("invalid identity %s", identity)
 	}
 	var ab []byte
 	if len(body.Assignee) > 0 {

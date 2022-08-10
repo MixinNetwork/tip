@@ -59,7 +59,7 @@ func TestGuard(t *testing.T) {
 	signature, data = makeTestRequestWithInvalidIdentity(user, node, ephmr, nil, 1039, grace, "", "", "")
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.NotNil(err)
-	assert.Contains(err.Error(), "invalid idenity ")
+	assert.Contains(err.Error(), "invalid identity ")
 
 	// invalid nonce
 	signature, data = makeTestRequest(user, node, ephmr, nil, 1024, grace)
