@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -30,7 +32,8 @@ func TestGuard(t *testing.T) {
 	signer := suite.Scalar().Pick(random.New())
 	node := crypto.PublicKey(signer)
 	user := suite.Scalar().Pick(random.New())
-	identity := crypto.PublicKeyString(crypto.PublicKey(user))
+	userPub := crypto.PublicKey(user)
+	identity := crypto.PublicKeyString(userPub)
 
 	ephmr := crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
 	grace := uint64(time.Hour * 24 * 128)
@@ -47,9 +50,20 @@ func TestGuard(t *testing.T) {
 		assert.Nil(err)
 	}
 
-	// invalid nonce
+	// data should be base64 RawURLEncoding and none blank
 	signature, data := makeTestRequest(user, node, ephmr, nil, 1024, grace)
-	res, err := Guard(bs, signer, identity, signature, data)
+	res, err := Guard(bs, signer, identity, signature, "")
+	assert.NotNil(err)
+
+	// identity is not equal
+	signature, data = makeTestRequestWithInvalidIdentity(user, node, ephmr, nil, 1039, grace, "", "", "")
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid identity ")
+
+	// invalid nonce
+	signature, data = makeTestRequest(user, node, ephmr, nil, 1024, grace)
+	res, err = Guard(bs, signer, identity, signature, data)
 	assert.Nil(res)
 	assert.Nil(err)
 	key := crypto.PublicKeyBytes(crypto.PublicKey(user))
@@ -111,6 +125,140 @@ func TestGuard(t *testing.T) {
 	available, err = bs.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, false)
 	assert.Equal(SecretLimitQuota-5, available)
 	assert.Nil(err)
+
+	// invalid assignee
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1039, grace, identity, "", "")
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid assignee ")
+	// valid assignee
+	assignee := crypto.PublicKeyBytes(userPub)
+	sig, err := crypto.Sign(user, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1039, grace, hex.EncodeToString(assignee), "", "")
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(err)
+	watcherSeed := make([]byte, 32)
+	_, err = rand.Read(watcherSeed)
+	assert.Nil(err)
+	assignee = crypto.PublicKeyBytes(userPub)
+	sig, err = crypto.Sign(user, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1040, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	_, counter, err := bs.WriteSignRequest(res.Assignor, res.Watcher)
+	assert.Nil(err)
+	assert.Equal(1, counter)
+	assignee, err = bs.ReadAssignee(crypto.PublicKeyBytes(userPub))
+	assert.Nil(err)
+	assert.Len(assignee, 128)
+	valid, err := bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1040, time.Duration(grace))
+	assert.Nil(err)
+	assert.False(valid)
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1041, time.Duration(grace))
+	assert.Nil(err)
+	assert.True(valid)
+	_, counter, err = bs.Watch(watcherSeed)
+	assert.Nil(err)
+	assert.Equal(1, counter)
+	// valid existing assignee counter + 1
+	assignee = crypto.PublicKeyBytes(userPub)
+	sig, err = crypto.Sign(user, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1042, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	_, counter, err = bs.WriteSignRequest(res.Assignor, res.Watcher)
+	assert.Nil(err)
+	assert.Equal(2, counter)
+	assignee, err = bs.ReadAssignee(crypto.PublicKeyBytes(userPub))
+	assert.Nil(err)
+	assert.Len(assignee, 128)
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1042, time.Duration(grace))
+	assert.Nil(err)
+	assert.False(valid)
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1043, time.Duration(grace))
+	assert.Nil(err)
+	assert.True(valid)
+	_, counter, err = bs.Watch(watcherSeed)
+	assert.Nil(err)
+	assert.Equal(2, counter)
+	// valid new assignee counter + 1
+	newUser := suite.Scalar().Pick(random.New())
+	newUserPub := crypto.PublicKey(newUser)
+	newIdentity := crypto.PublicKeyString(newUserPub)
+	assignee = crypto.PublicKeyBytes(newUserPub)
+	sig, err = crypto.Sign(newUser, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1045, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	// test user pin
+	signature, data = makeTestRequestWithAssigneeAndRotation(newUser, node, ephmr, nil, 1046, grace, "", "", hex.EncodeToString(watcherSeed))
+	resNew, err := Guard(bs, signer, newIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(resNew)
+	assert.True(bytes.Compare(res.Assignor, resNew.Assignor) == 0)
+	_, counter, err = bs.Watch(watcherSeed)
+	assert.Nil(err)
+	assert.Equal(3, counter)
+	// test user old pin
+	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1047, grace, "", "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid assignee")
+	// setup li pin
+	liWatcher := make([]byte, 32)
+	_, err = rand.Read(liWatcher)
+	assert.Nil(err)
+	li := suite.Scalar().Pick(random.New())
+	liPub := crypto.PublicKey(li)
+	liIdentity := crypto.PublicKeyString(liPub)
+	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 100, grace, "", "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	// update li' pin with wrong assignee
+	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 105, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liIdentity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid assignee")
+	// update li pin
+	liNew := suite.Scalar().Pick(random.New())
+	liNewPub := crypto.PublicKey(liNew)
+	liNewIdentity := crypto.PublicKeyString(liNewPub)
+	assignee = crypto.PublicKeyBytes(liNewPub)
+	sig, err = crypto.Sign(liNew, assignee)
+	assert.Nil(err)
+	assignee = append(assignee, sig...)
+	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 110, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(watcherSeed))
+	res, err = Guard(bs, signer, liIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	// test li pin
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 115, grace, "", "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liNewIdentity, signature, data)
+	assert.Nil(err)
+	assert.NotNil(res)
+	// pin should have watcher
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 117, grace, "", "", "")
+	res, err = Guard(bs, signer, liNewIdentity, signature, data)
+	assert.NotNil(err)
+	assert.Nil(res)
+	// invalid ephmr
+	ephmr = crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
+	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 119, grace, "", "", hex.EncodeToString(liWatcher))
+	res, err = Guard(bs, signer, liNewIdentity, signature, data)
+	assert.Nil(err)
+	assert.Nil(res)
 }
 
 func TestAssigneeAndRotation(t *testing.T) {
@@ -158,10 +306,12 @@ func TestAssigneeAndRotation(t *testing.T) {
 }
 
 func makeTestRequest(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64) (string, string) {
-	return makeTestRequestWithAssigneeAndRotation(user, signer, ephmr, rtt, nonce, grace, "", "")
+	seed := make([]byte, 32)
+	rand.Read(seed)
+	return makeTestRequestWithAssigneeAndRotation(user, signer, ephmr, rtt, nonce, grace, "", "", hex.EncodeToString(seed))
 }
 
-func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64, assignee, rotation string) (string, string) {
+func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64, assignee, rotation, watcher string) (string, string) {
 	pkey := crypto.PublicKey(user)
 	msg := crypto.PublicKeyBytes(pkey)
 	msg = append(msg, ephmr...)
@@ -175,6 +325,41 @@ func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Poin
 		"ephemeral": hex.EncodeToString(ephmr),
 		"nonce":     nonce,
 		"grace":     grace,
+		"watcher":   watcher,
+	}
+	if rtt != nil {
+		msg = append(msg, rtt[:]...)
+		data["rotate"] = hex.EncodeToString(rtt)
+	}
+	if assignee != "" {
+		buf, _ := hex.DecodeString(assignee)
+		msg = append(msg, buf...)
+		data["assignee"] = assignee
+	}
+	b, _ := json.Marshal(data)
+	cipher := crypto.Encrypt(signer, user, b)
+	sig, _ := crypto.Sign(user, msg)
+	return hex.EncodeToString(sig), base64.RawURLEncoding.EncodeToString(cipher[:])
+}
+
+func makeTestRequestWithInvalidIdentity(user kyber.Scalar, signer kyber.Point, ephmr, rtt []byte, nonce, grace uint64, assignee, rotation, watcher string) (string, string) {
+	pkey := crypto.PublicKey(user)
+	msg := crypto.PublicKeyBytes(pkey)
+	msg = append(msg, ephmr...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, nonce)
+	msg = append(msg, buf...)
+	binary.BigEndian.PutUint64(buf, grace)
+	msg = append(msg, buf...)
+	suite := bn256.NewSuiteBn256()
+	intruder := suite.Scalar().Pick(random.New())
+	intruderPub := crypto.PublicKey(intruder)
+	data := map[string]interface{}{
+		"identity":  crypto.PublicKeyString(intruderPub),
+		"ephemeral": hex.EncodeToString(ephmr),
+		"nonce":     nonce,
+		"grace":     grace,
+		"watcher":   watcher,
 	}
 	if rtt != nil {
 		msg = append(msg, rtt[:]...)
