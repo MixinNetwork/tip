@@ -190,19 +190,19 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 			if err != nil {
 				return err
 			} else if old != nil {
-				return fmt.Errorf("invalid assignee")
+				return fmt.Errorf("invalid assignee as is assignee")
 			}
 			old, err = readKey(txn, badgerKeyPrefixAssignor, assignee)
 			if err != nil {
 				return err
 			} else if old != nil {
-				return fmt.Errorf("invalid assignee")
+				return fmt.Errorf("invalid assignor as is assignee")
 			}
 			old, err = readKey(txn, badgerKeyPrefixNonce, assignee)
 			if err != nil {
 				return err
 			} else if old != nil {
-				return fmt.Errorf("invalid assignee")
+				return fmt.Errorf("invalid nonce as is assignee")
 			}
 		}
 
