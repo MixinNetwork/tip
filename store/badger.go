@@ -198,12 +198,6 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 			} else if old != nil {
 				return fmt.Errorf("invalid assignor as is assignee")
 			}
-			old, err = readKey(txn, badgerKeyPrefixNonce, assignee)
-			if err != nil {
-				return err
-			} else if old != nil {
-				return fmt.Errorf("invalid nonce as is assignee")
-			}
 		}
 
 		old, err := readKey(txn, badgerKeyPrefixAssignee, key)

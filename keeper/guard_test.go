@@ -230,7 +230,7 @@ func TestGuard(t *testing.T) {
 	signature, data = makeTestRequestWithAssigneeAndRotation(li, node, ephmr, nil, 105, grace, hex.EncodeToString(assignee), "", hex.EncodeToString(liWatcher))
 	res, err = Guard(bs, signer, liIdentity, signature, data)
 	assert.NotNil(err)
-	assert.Contains(err.Error(), "invalid assignee")
+	assert.Contains(err.Error(), "invalid assignor as is assignee")
 	// update li pin
 	liNew := suite.Scalar().Pick(random.New())
 	liNewPub := crypto.PublicKey(liNew)
