@@ -185,6 +185,16 @@ func (bs *BadgerStorage) WritePoly(public, share []byte) error {
 
 func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 	return bs.db.Update(func(txn *badger.Txn) error {
+		if oa, err := readKey(txn, badgerKeyPrefixAssignee, key); err != nil {
+			return err
+		} else if oa != nil {
+			rk := append([]byte(badgerKeyPrefixAssignor), oa...)
+			err = txn.Delete(rk)
+			if err != nil {
+				return err
+			}
+		}
+
 		if bytes.Compare(key, assignee) != 0 {
 			old, err := readKey(txn, badgerKeyPrefixAssignee, assignee)
 			if err != nil {
@@ -200,19 +210,8 @@ func (bs *BadgerStorage) WriteAssignee(key []byte, assignee []byte) error {
 			}
 		}
 
-		old, err := readKey(txn, badgerKeyPrefixAssignee, key)
-		if err != nil {
-			return err
-		} else if old != nil {
-			rk := append([]byte(badgerKeyPrefixAssignor), old...)
-			err = txn.Delete(rk)
-			if err != nil {
-				return err
-			}
-		}
-
 		lk := append([]byte(badgerKeyPrefixAssignee), key...)
-		err = txn.Set(lk, assignee)
+		err := txn.Set(lk, assignee)
 		if err != nil {
 			return err
 		}
