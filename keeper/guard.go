@@ -143,14 +143,18 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 
 func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64, ab []byte) error {
 	msg := crypto.PublicKeyBytes(pub)
-	msg = append(msg, eb.Bytes()...)
+	ebuf := make([]byte, 32)
+	eb.FillBytes(ebuf)
+	msg = append(msg, ebuf...)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, nonce)
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, grace)
 	msg = append(msg, buf...)
 	if rb != nil && rb.Sign() > 0 {
-		msg = append(msg, rb.Bytes()...)
+		rbuf := make([]byte, 32)
+		rb.FillBytes(rbuf)
+		msg = append(msg, rbuf...)
 	}
 	msg = append(msg, ab...)
 	return crypto.Verify(pub, msg, sig)
