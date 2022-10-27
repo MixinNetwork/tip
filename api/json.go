@@ -62,7 +62,7 @@ func watch(store store.Storage, watcher string) (time.Time, int, error) {
 func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
 	res, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
 	if err != nil {
-		logger.Debug("keeper.Guard", err)
+		logger.Debug("keeper.Guard", body.Identity, body.Signature, body.Data, err)
 		return nil, "", ErrUnknown
 	}
 	if res == nil || res.Available < 1 {

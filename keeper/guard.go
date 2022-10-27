@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
+	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/store"
 	"github.com/drand/kyber"
 )
@@ -84,6 +85,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	lkey := append(assignor, "EPHEMERAL"...)
 	available, err := store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
 	if err != nil || available < 1 {
+		logger.Debug("keeper.CheckLimit", "EPHEMERAL", false, hex.EncodeToString(assignor), available, err)
 		return nil, err
 	}
 	nonce, grace := uint64(body.Nonce), time.Duration(body.Grace)
@@ -96,6 +98,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	}
 	if !valid {
 		_, err = store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, true)
+		logger.Debug("keeper.CheckLimit", "EPHEMERAL", true, hex.EncodeToString(assignor), available, err)
 		return nil, err
 	}
 	if rb != nil && rb.Sign() > 0 {
@@ -108,6 +111,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	lkey = append(assignor, "SECRET"...)
 	available, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, false)
 	if err != nil || available < 1 {
+		logger.Debug("keeper.CheckLimit", "SECRET", false, hex.EncodeToString(assignor), available, err)
 		return nil, err
 	}
 	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
@@ -133,6 +137,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		}, nil
 	}
 	_, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
+	logger.Debug("keeper.CheckLimit", "SECRET", true, hex.EncodeToString(assignor), available, err)
 	return nil, err
 }
 
