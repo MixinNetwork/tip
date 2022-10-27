@@ -66,6 +66,7 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 		return nil, "", ErrUnknown
 	}
 	if res == nil || res.Available < 1 {
+		logger.Debug("keeper.Available", body.Identity, body.Signature, body.Data)
 		return nil, "", ErrTooManyRequest
 	}
 	watcher, _ := hex.DecodeString(body.Watcher)
