@@ -142,6 +142,9 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 }
 
 func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64, ab []byte) error {
+	if len(eb.Bytes()) > 32 || eb.Sign() <= 0 {
+		return fmt.Errorf("invalid ephemeral %x", eb.Bytes())
+	}
 	msg := crypto.PublicKeyBytes(pub)
 	ebuf := make([]byte, 32)
 	eb.FillBytes(ebuf)
@@ -151,7 +154,7 @@ func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace u
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, grace)
 	msg = append(msg, buf...)
-	if rb != nil && rb.Sign() > 0 {
+	if rb != nil && rb.Sign() > 0 && len(rb.Bytes()) <= 32 {
 		rbuf := make([]byte, 32)
 		rb.FillBytes(rbuf)
 		msg = append(msg, rbuf...)

@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -36,6 +37,7 @@ func TestGuard(t *testing.T) {
 	identity := crypto.PublicKeyString(userPub)
 
 	ephmr := crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
+	epb := new(big.Int).SetBytes(ephmr).Bytes()
 	grace := uint64(time.Hour * 24 * 128)
 	for i := uint64(0); i < 10; i++ {
 		signature, data := makeTestRequest(user, node, ephmr, nil, 1024+i, grace)
@@ -156,10 +158,10 @@ func TestGuard(t *testing.T) {
 	assignee, err = bs.ReadAssignee(crypto.PublicKeyBytes(userPub))
 	assert.Nil(err)
 	assert.Len(assignee, 128)
-	valid, err := bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1040, time.Duration(grace))
+	valid, err := bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), epb, 1040, time.Duration(grace))
 	assert.Nil(err)
 	assert.False(valid)
-	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1041, time.Duration(grace))
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), epb, 1041, time.Duration(grace))
 	assert.Nil(err)
 	assert.True(valid)
 	_, counter, err = bs.Watch(watcherSeed)
@@ -180,10 +182,10 @@ func TestGuard(t *testing.T) {
 	assignee, err = bs.ReadAssignee(crypto.PublicKeyBytes(userPub))
 	assert.Nil(err)
 	assert.Len(assignee, 128)
-	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1042, time.Duration(grace))
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), epb, 1042, time.Duration(grace))
 	assert.Nil(err)
 	assert.False(valid)
-	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), ephmr, 1043, time.Duration(grace))
+	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), epb, 1043, time.Duration(grace))
 	assert.Nil(err)
 	assert.True(valid)
 	_, counter, err = bs.Watch(watcherSeed)
