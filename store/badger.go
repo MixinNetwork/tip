@@ -276,6 +276,9 @@ func (bs *BadgerStorage) Watch(key []byte) ([]byte, time.Time, int, error) {
 }
 
 func (bs *BadgerStorage) WriteSignRequest(assignor, watcher []byte) (time.Time, int, error) {
+	if len(assignor) == 0 || len(watcher) == 0 {
+		return time.Time{}, 0, fmt.Errorf("invalid assignor %x or watcher %x", assignor, watcher)
+	}
 	var counter int
 	var genesis time.Time
 	err := bs.db.Update(func(txn *badger.Txn) error {

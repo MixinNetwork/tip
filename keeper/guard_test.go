@@ -79,7 +79,7 @@ func TestGuard(t *testing.T) {
 	signature, data = makeTestRequest(user, crypto.PublicKey(user), ephmr, nil, 1034, grace)
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.Nil(res)
-	assert.Contains(err.Error(), "invalid data ")
+	assert.Contains(err.Error(), "invalid json ")
 	key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey = append(key, "EPHEMERAL"...)
 	available, err = bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)

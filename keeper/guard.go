@@ -46,7 +46,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	var body body
 	err = json.Unmarshal(b, &body)
 	if err != nil {
-		return nil, fmt.Errorf("invalid data %s", string(b))
+		return nil, fmt.Errorf("invalid json %s", string(b))
 	}
 	if body.Identity != identity {
 		return nil, fmt.Errorf("invalid identity %s", identity)
