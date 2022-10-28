@@ -30,7 +30,6 @@ type Response struct {
 	Identity  kyber.Point
 	Assignor  []byte
 	Watcher   []byte
-	incorrect bool
 }
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (*Response, error) {
