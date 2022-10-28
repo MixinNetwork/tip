@@ -75,6 +75,9 @@ func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
 		if err == ErrTooManyRequest {
 			hdr.error(w, r, http.StatusTooManyRequests)
 			return
+		} else if err == ErrInvalidAssignor {
+			hdr.error(w, r, http.StatusForbidden)
+			return
 		} else if err != nil {
 			hdr.error(w, r, http.StatusInternalServerError)
 			return

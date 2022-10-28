@@ -61,6 +61,7 @@ func (bs *BadgerStorage) CheckLimit(key []byte, window time.Duration, quota uint
 			return nil
 		}
 
+		available--
 		buf := uint64ToBytes(now)
 		entry := badger.NewEntry(append(prefix, buf...), []byte{1})
 		entry = entry.WithTTL(window * 2)
@@ -248,30 +249,30 @@ func (bs *BadgerStorage) ReadAssignor(key []byte) ([]byte, error) {
 	return readKey(txn, badgerKeyPrefixAssignor, key)
 }
 
-func (bs *BadgerStorage) Watch(key []byte) (time.Time, int, error) {
+func (bs *BadgerStorage) Watch(key []byte) ([]byte, time.Time, int, error) {
 	txn := bs.db.NewTransaction(false)
 	defer txn.Discard()
 
 	assignor, err := readKey(txn, badgerKeyPrefixWatcher, key)
 	if err != nil {
-		return time.Time{}, 0, err
+		return nil, time.Time{}, 0, err
 	} else if assignor == nil {
-		return time.Time{}, 0, nil
+		return nil, time.Time{}, 0, nil
 	}
 
 	gb, err := readKey(txn, badgerKeyPrefixGenesis, assignor)
 	if err != nil {
-		return time.Time{}, 0, err
+		return assignor, time.Time{}, 0, err
 	}
 	genesis := time.Unix(0, int64(binary.BigEndian.Uint64(gb)))
 
 	cb, err := readKey(txn, badgerKeyPrefixCounter, assignor)
 	if err != nil {
-		return time.Time{}, 0, err
+		return assignor, time.Time{}, 0, err
 	}
 	counter := int(binary.BigEndian.Uint64(cb))
 
-	return genesis, counter, nil
+	return assignor, genesis, counter, nil
 }
 
 func (bs *BadgerStorage) WriteSignRequest(assignor, watcher []byte) (time.Time, int, error) {

@@ -56,33 +56,38 @@ func watch(store store.Storage, watcher string) (time.Time, int, error) {
 		return time.Time{}, 0, fmt.Errorf("invalid watcher %s", watcher)
 	}
 
-	return store.Watch(key)
+	_, genesis, counter, err := store.Watch(key)
+	return genesis, counter, err
 }
 
 func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
 	res, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
 	if err != nil {
-		logger.Debug("keeper.Guard", body.Identity, body.Signature, body.Data, err)
+		logger.Debug("keeper.Guard", body.Identity, body.Watcher, body.Signature, err)
 		return nil, "", ErrUnknown
 	}
-	if res == nil || res.Available < 1 {
-		logger.Debug("keeper.Available", body.Identity, body.Signature, body.Data)
+	if res.Available < 1 {
+		logger.Debug("keeper.Available", body.Identity, body.Watcher, body.Signature)
 		return nil, "", ErrTooManyRequest
 	}
 	watcher, _ := hex.DecodeString(body.Watcher)
 	if bytes.Compare(res.Watcher, watcher) != 0 {
-		return nil, "", fmt.Errorf("invalid watcher %s", body.Watcher)
+		logger.Debug("keeper.Watch", body.Identity, body.Watcher, body.Signature, body.Watcher)
+		return nil, "", ErrInvalidAssignor
 	}
+
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	partial, err := scheme.Sign(priv, res.Assignor)
 	if err != nil {
 		panic(err)
 	}
+
 	genesis, counter, err := store.WriteSignRequest(res.Assignor, res.Watcher)
 	if err != nil {
 		logger.Debug("store.WriteSignRequest", err)
 		return nil, "", ErrUnknown
 	}
+
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, res.Nonce)
 	plain := append(buf, partial...)

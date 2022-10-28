@@ -66,8 +66,9 @@ func TestGuard(t *testing.T) {
 	// invalid nonce
 	signature, data = makeTestRequest(user, node, ephmr, nil, 1024, grace)
 	res, err = Guard(bs, signer, identity, signature, data)
-	assert.Nil(res)
 	assert.Nil(err)
+	assert.Equal(EphemeralLimitQuota-1, res.Available)
+	assert.Nil(res.Watcher)
 	key := crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey := append(key, "EPHEMERAL"...)
 	available, err := bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
@@ -88,8 +89,9 @@ func TestGuard(t *testing.T) {
 	// invalid ephemeral
 	signature, data = makeTestRequest(user, node, crypto.PublicKeyBytes(node), nil, 1034, grace)
 	res, err = Guard(bs, signer, identity, signature, data)
-	assert.Nil(res)
 	assert.Nil(err)
+	assert.Equal(EphemeralLimitQuota-2, res.Available)
+	assert.Nil(res.Watcher)
 	key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 	lkey = append(key, "EPHEMERAL"...)
 	available, err = bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
@@ -100,8 +102,9 @@ func TestGuard(t *testing.T) {
 	for i := 1; i < 6; i++ {
 		signature, data = makeTestRequest(user, node, ephmr, nil, uint64(1033+i), grace)
 		res, err := Guard(bs, signer, identity, hex.EncodeToString(ephmr), data)
-		assert.Nil(res)
 		assert.Nil(err)
+		assert.Equal(res.Available, SecretLimitQuota-i)
+		assert.Nil(res.Watcher)
 		key = crypto.PublicKeyBytes(crypto.PublicKey(user))
 		lkey = append(key, "EPHEMERAL"...)
 		available, err := bs.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
@@ -140,7 +143,8 @@ func TestGuard(t *testing.T) {
 	assignee = append(assignee, sig...)
 	signature, data = makeTestRequestWithAssigneeAndRotation(user, node, ephmr, nil, 1039, grace, hex.EncodeToString(assignee), "", "")
 	res, err = Guard(bs, signer, identity, signature, data)
-	assert.Nil(err)
+	assert.Contains(err.Error(), "invalid watcher ")
+	assert.Nil(res)
 	watcherSeed := make([]byte, 32)
 	_, err = rand.Read(watcherSeed)
 	assert.Nil(err)
@@ -164,7 +168,7 @@ func TestGuard(t *testing.T) {
 	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), epb, 1041, time.Duration(grace))
 	assert.Nil(err)
 	assert.True(valid)
-	_, counter, err = bs.Watch(watcherSeed)
+	_, _, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(1, counter)
 	// valid existing assignee counter + 1
@@ -188,7 +192,7 @@ func TestGuard(t *testing.T) {
 	valid, err = bs.CheckEphemeralNonce(crypto.PublicKeyBytes(userPub), epb, 1043, time.Duration(grace))
 	assert.Nil(err)
 	assert.True(valid)
-	_, counter, err = bs.Watch(watcherSeed)
+	_, _, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(2, counter)
 	// valid new assignee counter + 1
@@ -209,7 +213,7 @@ func TestGuard(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(resNew)
 	assert.True(bytes.Compare(res.Assignor, resNew.Assignor) == 0)
-	_, counter, err = bs.Watch(watcherSeed)
+	_, _, counter, err = bs.Watch(watcherSeed)
 	assert.Nil(err)
 	assert.Equal(3, counter)
 	// test user old pin
@@ -253,14 +257,15 @@ func TestGuard(t *testing.T) {
 	// pin should have watcher
 	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 117, grace, "", "", "")
 	res, err = Guard(bs, signer, liNewIdentity, signature, data)
-	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid watcher ")
 	assert.Nil(res)
 	// invalid ephmr
 	ephmr = crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
 	signature, data = makeTestRequestWithAssigneeAndRotation(liNew, node, ephmr, nil, 119, grace, "", "", hex.EncodeToString(liWatcher))
 	res, err = Guard(bs, signer, liNewIdentity, signature, data)
 	assert.Nil(err)
-	assert.Nil(res)
+	assert.Equal(EphemeralLimitQuota-1, res.Available)
+	assert.Nil(res.Watcher)
 }
 
 func TestAssigneeAndRotation(t *testing.T) {

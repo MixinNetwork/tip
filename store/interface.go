@@ -15,5 +15,5 @@ type Storage interface {
 	CheckEphemeralNonce(key, ephemeral []byte, nonce uint64, grace time.Duration) (bool, error)
 	RotateEphemeralNonce(key, ephemeral []byte, nonce uint64) error
 	WriteSignRequest(key, watcher []byte) (time.Time, int, error)
-	Watch(key []byte) (time.Time, int, error)
+	Watch(key []byte) ([]byte, time.Time, int, error)
 }

@@ -21,7 +21,7 @@ const (
 	EphemeralLimitWindow = time.Hour * 24
 	EphemeralLimitQuota  = 42
 	SecretLimitWindow    = time.Hour * 24 * 7
-	SecretLimitQuota     = 7
+	SecretLimitQuota     = 10
 )
 
 type Response struct {
@@ -30,6 +30,7 @@ type Response struct {
 	Identity  kyber.Point
 	Assignor  []byte
 	Watcher   []byte
+	incorrect bool
 }
 
 func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data string) (*Response, error) {
@@ -82,11 +83,23 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		assignor = crypto.PublicKeyBytes(pub)
 	}
 
+	watcher, _ := hex.DecodeString(body.Watcher)
+	if len(watcher) != 32 {
+		return nil, fmt.Errorf("invalid watcher %s", body.Watcher)
+	}
+	if oas, _, _, err := store.Watch(watcher); err != nil {
+		return nil, fmt.Errorf("watch %x error %v", watcher, err)
+	} else if oas != nil && bytes.Compare(oas, assignor) != 0 {
+		lkey := append(oas, "SECRET"...)
+		available, err := store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
+		return &Response{Available: available}, err
+	}
+
 	lkey := append(assignor, "EPHEMERAL"...)
 	available, err := store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, false)
 	if err != nil || available < 1 {
 		logger.Debug("keeper.CheckLimit", "EPHEMERAL", false, hex.EncodeToString(assignor), available, err)
-		return nil, err
+		return &Response{Available: available}, err
 	}
 	nonce, grace := uint64(body.Nonce), time.Duration(body.Grace)
 	if grace < EphemeralGracePeriod {
@@ -97,9 +110,9 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return nil, err
 	}
 	if !valid {
-		_, err = store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, true)
+		available, err = store.CheckLimit(lkey, EphemeralLimitWindow, EphemeralLimitQuota, true)
 		logger.Debug("keeper.CheckLimit", "EPHEMERAL", true, hex.EncodeToString(assignor), available, err)
-		return nil, err
+		return &Response{Available: available}, err
 	}
 	if rb != nil && rb.Sign() > 0 {
 		err = store.RotateEphemeralNonce(assignor, rb.Bytes(), nonce)
@@ -112,7 +125,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	available, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, false)
 	if err != nil || available < 1 {
 		logger.Debug("keeper.CheckLimit", "SECRET", false, hex.EncodeToString(assignor), available, err)
-		return nil, err
+		return &Response{Available: available}, err
 	}
 	err = checkSignature(pub, sig, eb, rb, nonce, uint64(grace), ab)
 	if err == nil {
@@ -123,11 +136,6 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 			}
 		}
 
-		watcher, _ := hex.DecodeString(body.Watcher)
-		if len(watcher) != 32 {
-			return nil, fmt.Errorf("invalid watcher %s", body.Watcher)
-		}
-
 		return &Response{
 			Available: available,
 			Nonce:     nonce,
@@ -136,9 +144,9 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 			Watcher:   watcher,
 		}, nil
 	}
-	_, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
+	available, err = store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
 	logger.Debug("keeper.CheckLimit", "SECRET", true, hex.EncodeToString(assignor), available, err)
-	return nil, err
+	return &Response{Available: available}, err
 }
 
 func checkSignature(pub kyber.Point, sig []byte, eb, rb *big.Int, nonce, grace uint64, ab []byte) error {
