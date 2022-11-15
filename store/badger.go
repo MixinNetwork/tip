@@ -288,6 +288,9 @@ func (bs *BadgerStorage) WriteSignRequest(assignor, watcher []byte) (time.Time, 
 		} else if cb != nil {
 			counter = int(binary.BigEndian.Uint64(cb))
 		} else {
+			// counter means the number of key an identity has used in the node, thus
+			// the first counter returned is 1 after an identity assignor created.
+			// counter is only increased whenever a new key created, i.e. WriteAssignee
 			counter = 1
 		}
 
