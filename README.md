@@ -79,7 +79,7 @@ The code doesn't include any incentive or punishment for the entities running th
 
 All the cryptography libraries used in this repository are being developed and used by industry-leading institutions, notably the [drand project](https://github.com/drand/drand) and its league of entropy that includes Cloudflare, EPFL, Kudelski Security, Protocol Labs, Celo, UCL, and UIUC.
 
-However, there are no finished audits for this repository yet. This code is offered as-is and without a warranty of any kind. It will need an independent security review before it should be considered ready for use in security-critical applications.
+The code has been audited by Certik, and the audit report can be found at https://github.com/MixinNetwork/audits.
 
 ## Contribution
 
