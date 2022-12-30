@@ -34,7 +34,7 @@ func (node *Node) NewBoard(ctx context.Context, nonce uint64) *Board {
 func (t *Board) PushDeals(db *dkg.DealBundle) {
 	data := encodeDealBundle(db, t.nonce)
 	msg := makeMessage(t.key, MessageActionDKGDeal, data)
-	err := t.messenger.SendMessage(t.ctx, msg)
+	err := t.messenger.BroadcastMessage(t.ctx, msg)
 	logger.Verbose("PushDeals", len(msg), err)
 }
 
@@ -45,7 +45,7 @@ func (t *Board) IncomingDeal() <-chan dkg.DealBundle {
 func (t *Board) PushResponses(rb *dkg.ResponseBundle) {
 	data := encodeResponseBundle(rb)
 	msg := makeMessage(t.key, MessageActionDKGResponse, data)
-	err := t.messenger.SendMessage(t.ctx, msg)
+	err := t.messenger.BroadcastMessage(t.ctx, msg)
 	logger.Verbose("PushResponses", len(msg), err)
 }
 
@@ -56,7 +56,7 @@ func (t *Board) IncomingResponse() <-chan dkg.ResponseBundle {
 func (t *Board) PushJustifications(jb *dkg.JustificationBundle) {
 	data := encodeJustificationBundle(jb)
 	msg := makeMessage(t.key, MessageActionDKGJustify, data)
-	err := t.messenger.SendMessage(t.ctx, msg)
+	err := t.messenger.BroadcastMessage(t.ctx, msg)
 	logger.Verbose("PushJustifications", len(msg), err)
 }
 
