@@ -96,7 +96,7 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	plain = append(plain, buf...)
 	binary.BigEndian.PutUint64(buf, uint64(counter))
 	plain = append(plain, buf...)
-	cipher := crypto.Encrypt(res.Identity, key, plain)
+	cipher := crypto.EncryptECDH(res.Identity, key, plain)
 	data := map[string]interface{}{
 		"cipher": hex.EncodeToString(cipher),
 	}

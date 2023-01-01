@@ -113,7 +113,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 		if err != nil {
 			panic(err)
 		}
-		dec := crypto.Decrypt(pub, key, enc)
+		dec := crypto.DecryptECDH(pub, key, enc)
 		if len(dec) != 8+66+128+8+8 {
 			evicted = append(evicted, s)
 			continue
@@ -196,7 +196,7 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotat
 	if err != nil {
 		panic(err)
 	}
-	cipher := crypto.Encrypt(spub, key, b)
+	cipher := crypto.EncryptECDH(spub, key, b)
 	sig, _ := crypto.Sign(key, msg)
 	b, _ = json.Marshal(map[string]interface{}{
 		"action":    "SIGN",

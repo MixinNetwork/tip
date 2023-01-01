@@ -391,7 +391,7 @@ func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Poin
 		data["assignee"] = assignee
 	}
 	b, _ := json.Marshal(data)
-	cipher := crypto.Encrypt(signer, user, b)
+	cipher := crypto.EncryptECDH(signer, user, b)
 	sig, _ := crypto.Sign(user, msg)
 	return hex.EncodeToString(sig), base64.RawURLEncoding.EncodeToString(cipher[:])
 }
@@ -420,7 +420,7 @@ func makeTestRequestWithInvalidIdentity(user kyber.Scalar, signer kyber.Point, e
 		data["rotate"] = hex.EncodeToString(rtt)
 	}
 	b, _ := json.Marshal(data)
-	cipher := crypto.Encrypt(signer, user, b)
+	cipher := crypto.EncryptECDH(signer, user, b)
 	sig, _ := crypto.Sign(user, msg)
 	return hex.EncodeToString(sig), base64.RawURLEncoding.EncodeToString(cipher[:])
 }

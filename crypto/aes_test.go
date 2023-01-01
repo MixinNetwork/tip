@@ -40,8 +40,8 @@ func TestEncDec(t *testing.T) {
 	p2 := suite.Point().Mul(s2, nil)
 
 	text := []byte("hello")
-	b := Encrypt(p2, s1, text)
+	b := EncryptECDH(p2, s1, text)
 	assert.Len(b, 12+16+len(text))
-	dec := Decrypt(p1, s2, b)
+	dec := DecryptECDH(p1, s2, b)
 	assert.Equal(text, dec)
 }

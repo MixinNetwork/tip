@@ -41,7 +41,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if err != nil {
 		return nil, fmt.Errorf("invalid identity %s", identity)
 	}
-	b = crypto.Decrypt(pub, priv, b)
+	b = crypto.DecryptECDH(pub, priv, b)
 
 	var body body
 	err = json.Unmarshal(b, &body)

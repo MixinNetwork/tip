@@ -24,8 +24,7 @@ func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
 	return sum[:]
 }
 
-func Decrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
-	secret := ecdh(pub, priv)
+func Decrypt(secret, b []byte) []byte {
 	aes, _ := aes.NewCipher(secret)
 	aead, _ := cipher.NewGCM(aes)
 	nonce := b[:aead.NonceSize()]
@@ -34,8 +33,7 @@ func Decrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 	return d
 }
 
-func Encrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
-	secret := ecdh(pub, priv)
+func Encrypt(secret, b []byte) []byte {
 	aes, err := aes.NewCipher(secret)
 	if err != nil {
 		panic(err)
@@ -51,4 +49,14 @@ func Encrypt(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 	}
 	cipher := aead.Seal(nil, nonce, b, nil)
 	return append(nonce, cipher...)
+}
+
+func DecryptECDH(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
+	secret := ecdh(pub, priv)
+	return Decrypt(secret, b)
+}
+
+func EncryptECDH(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
+	secret := ecdh(pub, priv)
+	return Encrypt(secret, b)
 }
