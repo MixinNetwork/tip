@@ -1,18 +1,18 @@
 module github.com/MixinNetwork/tip
 
-go 1.17
+go 1.20
 
 require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/dgraph-io/badger/v3 v3.2103.2
-	github.com/drand/kyber v1.1.11
-	github.com/fox-one/mixin-sdk-go v1.6.15
-	github.com/gofrs/uuid v4.2.0+incompatible
+	github.com/drand/kyber v1.1.18
+	github.com/fox-one/mixin-sdk-go v1.7.3
+	github.com/gofrs/uuid v4.3.0+incompatible
 	github.com/pelletier/go-toml v1.9.5
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/unrolled/render v1.5.0
 	github.com/urfave/cli/v2 v2.10.3
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
+	golang.org/x/crypto v0.7.0
 )
 
 require (
@@ -44,9 +44,9 @@ require (
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.dedis.ch/fixbuf v1.0.3 // indirect
 	go.opencensus.io v0.22.5 // indirect
-	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
