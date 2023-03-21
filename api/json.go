@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -70,9 +69,8 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 		logger.Debug("keeper.Available", body.Identity, body.Watcher, body.Signature)
 		return nil, "", ErrTooManyRequest
 	}
-	watcher, _ := hex.DecodeString(body.Watcher)
-	if bytes.Compare(res.Watcher, watcher) != 0 {
-		logger.Debug("keeper.Watch", body.Identity, body.Watcher, body.Signature, body.Watcher)
+	if watcher := hex.EncodeToString(res.Watcher); watcher != body.Watcher {
+		logger.Debug("keeper.Watch", body.Identity, body.Watcher, body.Signature, watcher)
 		return nil, "", ErrInvalidAssignor
 	}
 

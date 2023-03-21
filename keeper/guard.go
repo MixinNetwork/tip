@@ -86,11 +86,15 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if len(watcher) != 32 {
 		return nil, fmt.Errorf("invalid watcher %s", body.Watcher)
 	}
-	if oas, _, _, err := store.Watch(watcher); err != nil {
+	oas, og, oc, err := store.Watch(watcher)
+	logger.Debug("store.Watch", body.Watcher, hex.EncodeToString(oas), og, oc, err)
+	if err != nil {
 		return nil, fmt.Errorf("watch %x error %v", watcher, err)
-	} else if oas != nil && bytes.Compare(oas, assignor) != 0 {
+	}
+	if oas != nil && bytes.Compare(oas, assignor) != 0 {
 		lkey := append(oas, "SECRET"...)
 		available, err := store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
+		logger.Debug("keeper.CheckLimit", "WATCHER", true, hex.EncodeToString(oas), hex.EncodeToString(assignor), available, err)
 		return &Response{Available: available}, err
 	}
 
