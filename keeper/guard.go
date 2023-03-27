@@ -71,8 +71,11 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	assignee, err := store.ReadAssignee(crypto.PublicKeyBytes(pub))
 	if err != nil {
 		return nil, err
-	} else if assignee != nil && bytes.Compare(assignee, crypto.PublicKeyBytes(pub)) != 0 {
-		return nil, fmt.Errorf("invalid assignee %s", assignee)
+	} else if pb := crypto.PublicKeyBytes(pub); assignee != nil && bytes.Compare(assignee, pb) != 0 {
+		lkey := append(pb, "SECRET"...)
+		available, err := store.CheckLimit(lkey, SecretLimitWindow, SecretLimitQuota, true)
+		logger.Debug("keeper.CheckLimit", "ASSIGNEE", true, hex.EncodeToString(assignee), hex.EncodeToString(pb), available, err)
+		return &Response{Available: available}, err
 	}
 
 	assignor, err := store.ReadAssignor(crypto.PublicKeyBytes(pub))
@@ -134,6 +137,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 	if err == nil {
 		if len(ab) > 0 {
 			err := store.WriteAssignee(assignor, ab[:128])
+			logger.Debugf("store.WriteAssignee(%x, %x) => %v", assignor, ab[:128], err)
 			if err != nil {
 				return nil, err
 			}

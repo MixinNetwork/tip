@@ -72,6 +72,7 @@ func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
 	switch body.Action {
 	case "SIGN":
 		data, sig, err := sign(hdr.conf.Key, hdr.store, &body, hdr.conf.Share)
+		logger.Debug("api.sign", body.Identity, data, sig, err)
 		if err == ErrTooManyRequest {
 			hdr.error(w, r, http.StatusTooManyRequests)
 			return
