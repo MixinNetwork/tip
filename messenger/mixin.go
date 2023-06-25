@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"strings"
 	"time"
 
 	"github.com/MixinNetwork/tip/logger"
@@ -125,17 +126,17 @@ func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, si
 		case msg := <-mm.send:
 			batch = append(batch, msg)
 			if len(batch) > size {
-				err := mm.client.SendMessages(ctx, batch)
+				err := mm.sendMessagesWithoutTimeout(ctx, batch)
 				if err != nil {
-					logger.Errorf("SendMessages %s\n", err)
+					logger.Errorf("sendMessagesWithoutTimeout %s\n", err)
 				}
 				batch = nil
 			}
 		case <-ticker.C:
 			if len(batch) > 0 {
-				err := mm.client.SendMessages(ctx, batch)
+				err := mm.sendMessagesWithoutTimeout(ctx, batch)
 				if err != nil {
-					logger.Errorf("SendMessages %s\n", err)
+					logger.Errorf("sendMessagesWithoutTimeout %s\n", err)
 				}
 				batch = nil
 			}
@@ -172,6 +173,16 @@ func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView,
 
 func (mm *MixinMessenger) OnAckReceipt(ctx context.Context, msg *mixin.MessageView, userId string) error {
 	return nil
+}
+
+func (mm *MixinMessenger) sendMessagesWithoutTimeout(ctx context.Context, batch []*mixin.MessageRequest) error {
+	for {
+		err := mm.client.SendMessages(ctx, batch)
+		if err != nil && strings.Contains(err.Error(), "Client.Timeout exceeded") {
+			continue
+		}
+		return err
+	}
 }
 
 func uniqueMessageId(receiver string, b []byte) string {
