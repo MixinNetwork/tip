@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MixinNetwork/bot-api-go-client"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/fox-one/mixin-sdk-go"
 	"github.com/gofrs/uuid"
@@ -22,6 +23,7 @@ type MixinConfiguration struct {
 
 type MixinMessenger struct {
 	client         *mixin.Client
+	blaze          *bot.BlazeClient
 	conversationId string
 	recv           chan []byte
 	send           chan *mixin.MessageRequest
@@ -38,9 +40,10 @@ func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMes
 	if err != nil {
 		return nil, err
 	}
-
+	blaze := bot.NewBlazeClient(conf.UserId, conf.SessionId, conf.SessionId)
 	mm := &MixinMessenger{
 		client:         client,
+		blaze:          blaze,
 		conversationId: conf.ConversationId,
 		recv:           make(chan []byte, conf.Buffer),
 		send:           make(chan *mixin.MessageRequest, conf.Buffer),
@@ -107,8 +110,8 @@ func (mm *MixinMessenger) buildMessage(receiver string, b []byte) *mixin.Message
 
 func (mm *MixinMessenger) loopReceive(ctx context.Context) {
 	for {
-		err := mm.client.LoopBlaze(context.Background(), mm)
-		logger.Errorf("LoopBlaze %s\n", err)
+		err := mm.blaze.Loop(context.Background(), mm)
+		logger.Errorf("blaze.Loop %s\n", err)
 		if ctx.Err() != nil {
 			break
 		}
@@ -144,11 +147,11 @@ func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, si
 	}
 }
 
-func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView, userId string) error {
+func (mm *MixinMessenger) OnMessage(ctx context.Context, msg bot.MessageView, userId string) error {
 	if msg.Category != mixin.MessageCategoryPlainText {
 		return nil
 	}
-	if msg.ConversationID != mm.conversationId {
+	if msg.ConversationId != mm.conversationId {
 		return nil
 	}
 	data, err := base64.StdEncoding.DecodeString(msg.Data)
@@ -159,7 +162,7 @@ func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView,
 	if err != nil {
 		return nil
 	}
-	sender, err := uuid.FromString(msg.UserID)
+	sender, err := uuid.FromString(msg.UserId)
 	if err != nil {
 		return nil
 	}
@@ -171,8 +174,12 @@ func (mm *MixinMessenger) OnMessage(ctx context.Context, msg *mixin.MessageView,
 	return nil
 }
 
-func (mm *MixinMessenger) OnAckReceipt(ctx context.Context, msg *mixin.MessageView, userId string) error {
+func (mm *MixinMessenger) OnAckReceipt(ctx context.Context, msg bot.MessageView, userId string) error {
 	return nil
+}
+
+func (mm *MixinMessenger) SyncAck() bool {
+	return true
 }
 
 func (mm *MixinMessenger) sendMessagesWithoutTimeout(ctx context.Context, batch []*mixin.MessageRequest) error {
