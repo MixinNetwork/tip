@@ -40,7 +40,7 @@ func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMes
 	if err != nil {
 		return nil, err
 	}
-	blaze := bot.NewBlazeClient(conf.UserId, conf.SessionId, conf.SessionId)
+	blaze := bot.NewBlazeClient(conf.UserId, conf.SessionId, conf.Key)
 	mm := &MixinMessenger{
 		client:         client,
 		blaze:          blaze,
