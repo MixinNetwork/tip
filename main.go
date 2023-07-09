@@ -26,7 +26,7 @@ func main() {
 	app := &cli.App{
 		Name:                 "tip",
 		Usage:                "TIP (Throttled Identity PIN) is a decentralized key custodian.",
-		Version:              "0.2.4",
+		Version:              "0.2.5",
 		EnableBashCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{

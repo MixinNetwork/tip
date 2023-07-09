@@ -111,7 +111,7 @@ func (mm *MixinMessenger) loopReceive(ctx context.Context) {
 	for {
 		blaze := bot.NewBlazeClient(mm.conf.UserId, mm.conf.SessionId, mm.conf.Key)
 		err := blaze.Loop(context.Background(), mm)
-		logger.Errorf("blaze.Loop %s\n", err)
+		logger.Errorf("blaze.Loop %v\n", err)
 		if ctx.Err() != nil {
 			break
 		}
