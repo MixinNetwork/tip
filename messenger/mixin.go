@@ -23,7 +23,7 @@ type MixinConfiguration struct {
 
 type MixinMessenger struct {
 	client         *mixin.Client
-	blaze          *bot.BlazeClient
+	conf           *MixinConfiguration
 	conversationId string
 	recv           chan []byte
 	send           chan *mixin.MessageRequest
@@ -40,10 +40,9 @@ func NewMixinMessenger(ctx context.Context, conf *MixinConfiguration) (*MixinMes
 	if err != nil {
 		return nil, err
 	}
-	blaze := bot.NewBlazeClient(conf.UserId, conf.SessionId, conf.Key)
 	mm := &MixinMessenger{
 		client:         client,
-		blaze:          blaze,
+		conf:           conf,
 		conversationId: conf.ConversationId,
 		recv:           make(chan []byte, conf.Buffer),
 		send:           make(chan *mixin.MessageRequest, conf.Buffer),
@@ -110,7 +109,8 @@ func (mm *MixinMessenger) buildMessage(receiver string, b []byte) *mixin.Message
 
 func (mm *MixinMessenger) loopReceive(ctx context.Context) {
 	for {
-		err := mm.blaze.Loop(context.Background(), mm)
+		blaze := bot.NewBlazeClient(mm.conf.UserId, mm.conf.SessionId, mm.conf.Key)
+		err := blaze.Loop(context.Background(), mm)
 		logger.Errorf("blaze.Loop %s\n", err)
 		if ctx.Err() != nil {
 			break
@@ -124,15 +124,21 @@ func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, si
 	defer ticker.Stop()
 
 	var batch []*mixin.MessageRequest
+	filter := make(map[string]bool)
 	for {
 		select {
 		case msg := <-mm.send:
+			if filter[msg.MessageID] {
+				continue
+			}
+			filter[msg.MessageID] = true
 			batch = append(batch, msg)
 			if len(batch) > size {
 				err := mm.sendMessagesWithoutTimeout(ctx, batch)
 				if err != nil {
 					logger.Errorf("sendMessagesWithoutTimeout %s\n", err)
 				}
+				filter = make(map[string]bool)
 				batch = nil
 			}
 		case <-ticker.C:
@@ -141,6 +147,7 @@ func (mm *MixinMessenger) loopSend(ctx context.Context, period time.Duration, si
 				if err != nil {
 					logger.Errorf("sendMessagesWithoutTimeout %s\n", err)
 				}
+				filter = make(map[string]bool)
 				batch = nil
 			}
 		}
