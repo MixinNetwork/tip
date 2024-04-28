@@ -4,8 +4,6 @@ go 1.22.2
 
 require (
 	github.com/MixinNetwork/bot-api-go-client v1.8.7
-	github.com/MixinNetwork/go-number v0.1.1
-	github.com/MixinNetwork/mixin v0.16.10
 	github.com/btcsuite/btcd/btcutil v1.1.5
 	github.com/dgraph-io/badger/v3 v3.2103.5
 	github.com/drand/kyber v1.3.0
@@ -20,6 +18,8 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.0.0 // indirect
+	github.com/MixinNetwork/go-number v0.1.1 // indirect
+	github.com/MixinNetwork/mixin v0.16.10 // indirect
 	github.com/MixinNetwork/mobilecoin-account v0.0.5 // indirect
 	github.com/MixinNetwork/msgpack/v4 v4.4.0 // indirect
 	github.com/btcsuite/btcutil v1.0.2 // indirect
@@ -33,7 +33,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fox-one/msgpack v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-resty/resty/v2 v2.10.0 // indirect
+	github.com/go-resty/resty/v2 v2.11.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
