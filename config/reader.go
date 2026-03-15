@@ -22,7 +22,10 @@ type Configuration struct {
 
 func ReadConfiguration(path string) (*Configuration, error) {
 	if strings.HasPrefix(path, "~/") {
-		usr, _ := user.Current()
+		usr, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
 		path = filepath.Join(usr.HomeDir, (path)[2:])
 	}
 	f, err := os.ReadFile(path)

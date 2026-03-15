@@ -25,11 +25,20 @@ func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
 }
 
 func Decrypt(secret, b []byte) []byte {
-	aes, _ := aes.NewCipher(secret)
-	aead, _ := cipher.NewGCM(aes)
+	block, err := aes.NewCipher(secret)
+	if err != nil {
+		return nil
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil
+	}
+	if len(b) < aead.NonceSize() {
+		return nil
+	}
 	nonce := b[:aead.NonceSize()]
-	cipher := b[aead.NonceSize():]
-	d, _ := aead.Open(nil, nonce, cipher, nil)
+	ciphertext := b[aead.NonceSize():]
+	d, _ := aead.Open(nil, nonce, ciphertext, nil)
 	return d
 }
 

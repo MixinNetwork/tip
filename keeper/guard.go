@@ -187,7 +187,7 @@ func checkAssignee(as string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid assignee format %s", err)
 	}
 	if len(ab) != 192 {
-		return nil, fmt.Errorf("invalid assignee format %d", len(as))
+		return nil, fmt.Errorf("invalid assignee format %d", len(ab))
 	}
 	ap, err := crypto.PubKeyFromBytes(ab[:128])
 	if err != nil {

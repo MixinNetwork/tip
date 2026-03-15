@@ -121,10 +121,11 @@ func runSigner(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	defer store.Close()
 
 	messenger, err := messenger.NewMixinMessenger(ctx, conf.Messenger)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	node := signer.NewNode(ctx, cancel, store, messenger, conf.Node)
@@ -144,6 +145,7 @@ func runAPI(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	defer store.Close()
 
 	node := signer.NewNode(ctx, nil, store, nil, conf.Node)
 
@@ -172,7 +174,7 @@ func requestSetup(c *cli.Context) error {
 
 	key, err := crypto.PrivateKeyFromHex(conf.Node.Key)
 	if err != nil {
-		panic(conf.Node.Key)
+		return fmt.Errorf("invalid node key: %w", err)
 	}
 
 	s := &mixin.Keystore{

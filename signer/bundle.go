@@ -271,6 +271,9 @@ func (dec *Decoder) ReadBytes() ([]byte, error) {
 	if l == 0 {
 		return nil, nil
 	}
+	if l < 0 || l > dec.buf.Len() {
+		return nil, fmt.Errorf("invalid bytes length %d", l)
+	}
 	b := make([]byte, l)
 	err = dec.Read(b)
 	return b, err
