@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -43,7 +44,7 @@ func TestGuard(t *testing.T) {
 	ephmr := crypto.PrivateKeyBytes(suite.Scalar().Pick(random.New()))
 	epb := new(big.Int).SetBytes(ephmr).Bytes()
 	grace := uint64(time.Hour * 24 * 128)
-	for i := uint64(0); i < 10; i++ {
+	for i := range uint64(10) {
 		signature, data := makeTestRequest(user, node, ephmr, nil, 1024+i, grace)
 		res, err := Guard(bs, signer, identity, signature, data)
 		assert.Nil(err)
@@ -96,6 +97,11 @@ func TestGuard(t *testing.T) {
 
 	// invalid ephemeral
 	signature, data = makeTestRequest(user, node, crypto.PublicKeyBytes(node), nil, 1034, grace)
+	res, err = Guard(bs, signer, identity, signature, data)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "invalid ephemeral")
+	assert.Nil(res)
+	signature, data = makeTestRequest(user, node, bytes.Repeat([]byte{1}, 29), nil, 1034, grace)
 	res, err = Guard(bs, signer, identity, signature, data)
 	assert.Nil(err)
 	assert.Equal(EphemeralLimitQuota-2, res.Available)
@@ -379,7 +385,7 @@ func makeTestRequestWithAssigneeAndRotation(user kyber.Scalar, signer kyber.Poin
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, grace)
 	msg = append(msg, buf...)
-	data := map[string]interface{}{
+	data := map[string]any{
 		"identity":  crypto.PublicKeyString(pkey),
 		"ephemeral": hex.EncodeToString(ephmr),
 		"nonce":     nonce,
@@ -414,7 +420,7 @@ func makeTestRequestWithInvalidIdentity(user kyber.Scalar, signer kyber.Point, e
 	suite := bn256.NewSuiteBn256()
 	intruder := suite.Scalar().Pick(random.New())
 	intruderPub := crypto.PublicKey(intruder)
-	data := map[string]interface{}{
+	data := map[string]any{
 		"identity":  crypto.PublicKeyString(intruderPub),
 		"ephemeral": hex.EncodeToString(ephmr),
 		"nonce":     nonce,

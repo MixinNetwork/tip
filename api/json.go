@@ -26,10 +26,10 @@ type SignRequest struct {
 	Data      string `json:"data"`
 }
 
-func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, string) {
-	signers := make([]map[string]interface{}, len(sigrs))
+func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (any, string) {
+	signers := make([]map[string]any, len(sigrs))
 	for i, s := range sigrs {
-		signers[i] = map[string]interface{}{
+		signers[i] = map[string]any{
 			"index":    s.Index,
 			"identity": crypto.PublicKeyString(s.Public),
 		}
@@ -39,7 +39,7 @@ func info(key kyber.Scalar, sigrs []dkg.Node, poly []kyber.Point) (interface{}, 
 		commitments[i] = crypto.PublicKeyString(c)
 	}
 	id := crypto.PublicKey(key)
-	data := map[string]interface{}{
+	data := map[string]any{
 		"identity":    crypto.PublicKeyString(id),
 		"signers":     signers,
 		"commitments": commitments,
@@ -59,7 +59,7 @@ func watch(store store.Storage, watcher string) (time.Time, int, error) {
 	return genesis, counter, err
 }
 
-func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (interface{}, string, error) {
+func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.PriShare) (any, string, error) {
 	res, err := keeper.Guard(store, key, body.Identity, body.Signature, body.Data)
 	if err != nil {
 		logger.Debug("keeper.Guard", body.Identity, body.Watcher, body.Signature, err)
@@ -95,7 +95,7 @@ func sign(key kyber.Scalar, store store.Storage, body *SignRequest, priv *share.
 	binary.BigEndian.PutUint64(buf, uint64(counter))
 	plain = append(plain, buf...)
 	cipher := crypto.EncryptECDH(res.Identity, key, plain)
-	data := map[string]interface{}{
+	data := map[string]any{
 		"cipher": hex.EncodeToString(cipher),
 	}
 	b, _ := json.Marshal(data)

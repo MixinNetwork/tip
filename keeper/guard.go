@@ -59,7 +59,7 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		}
 	}
 	eb, valid := new(big.Int).SetString(body.Ephemeral, 16)
-	if !valid {
+	if !valid || len(eb.Bytes()) > 32 || eb.Sign() <= 0 {
 		return nil, fmt.Errorf("invalid ephemeral %s", body.Ephemeral)
 	}
 	rb, _ := new(big.Int).SetString(body.Rotate, 16)
@@ -121,6 +121,9 @@ func Guard(store store.Storage, priv kyber.Scalar, identity, signature, data str
 		return &Response{Available: available}, err
 	}
 	if rb != nil && rb.Sign() > 0 {
+		if len(rb.Bytes()) > 32 {
+			return nil, fmt.Errorf("invalid rotation %x", rb.Bytes())
+		}
 		err = store.RotateEphemeralNonce(assignor, rb.Bytes(), nonce)
 		if err != nil {
 			return nil, err

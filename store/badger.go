@@ -340,7 +340,10 @@ func OpenBadger(ctx context.Context, conf *BadgerConfiguration) (*BadgerStorage,
 }
 
 func (bs *BadgerStorage) Close() {
-	bs.db.Close()
+	err := bs.db.Close()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func readKey(txn *badger.Txn, prefix string, key []byte) ([]byte, error) {

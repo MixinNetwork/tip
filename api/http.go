@@ -59,10 +59,11 @@ func (hdr *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data, sig := info(hdr.conf.Key, hdr.conf.Signers, hdr.conf.Poly)
-	hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig, "version": "v0.2.0"})
+	hdr.json(w, r, http.StatusOK, map[string]any{"data": data, "signature": sig, "version": "v0.2.0"})
 }
 
 func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1024)
 	var body SignRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
@@ -83,27 +84,27 @@ func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
 			hdr.error(w, r, http.StatusInternalServerError)
 			return
 		}
-		hdr.json(w, r, http.StatusOK, map[string]interface{}{"data": data, "signature": sig})
+		hdr.json(w, r, http.StatusOK, map[string]any{"data": data, "signature": sig})
 	case "WATCH":
 		genesis, counter, err := watch(hdr.store, body.Watcher)
 		if err != nil {
 			hdr.error(w, r, http.StatusInternalServerError)
 			return
 		}
-		hdr.json(w, r, http.StatusOK, map[string]interface{}{"genesis": genesis, "counter": counter})
+		hdr.json(w, r, http.StatusOK, map[string]any{"genesis": genesis, "counter": counter})
 	default:
 		hdr.error(w, r, http.StatusBadRequest)
 	}
 }
 
 func (hdr *Handler) error(w http.ResponseWriter, r *http.Request, code int) {
-	hdr.json(w, r, code, map[string]interface{}{"error": map[string]interface{}{
+	hdr.json(w, r, code, map[string]any{"error": map[string]any{
 		"code":        code,
 		"description": http.StatusText(code),
 	}})
 }
 
-func (hdr *Handler) json(w http.ResponseWriter, r *http.Request, code int, data interface{}) {
+func (hdr *Handler) json(w http.ResponseWriter, r *http.Request, code int, data any) {
 	id := r.Header.Get("X-Request-ID")
 	logger.Info(r.Method, r.URL, id, code, data)
 	_ = hdr.render.JSON(w, code, data)
@@ -121,7 +122,7 @@ func handleCORS(handler http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS,GET,POST,DELETE")
 		w.Header().Set("Access-Control-Max-Age", "600")
 		if r.Method == "OPTIONS" {
-			_ = render.New().JSON(w, http.StatusOK, map[string]interface{}{})
+			_ = render.New().JSON(w, http.StatusOK, map[string]any{})
 		} else {
 			handler.ServeHTTP(w, r)
 		}

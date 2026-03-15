@@ -2,6 +2,7 @@ package tip
 
 import (
 	"bytes"
+	"crypto/sha3"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
@@ -13,7 +14,6 @@ import (
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/sign/tbls"
-	"golang.org/x/crypto/sha3"
 )
 
 type Client struct {
@@ -170,7 +170,7 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotat
 	msg = append(msg, buf...)
 	binary.BigEndian.PutUint64(buf, grace)
 	msg = append(msg, buf...)
-	data := map[string]interface{}{
+	data := map[string]any{
 		"identity":  crypto.PublicKeyString(pkey),
 		"ephemeral": hex.EncodeToString(esum[:]),
 		"watcher":   watcher,
@@ -198,7 +198,7 @@ func sign(key kyber.Scalar, nodeId, ephemeral string, nonce, grace uint64, rotat
 	}
 	cipher := crypto.EncryptECDH(spub, key, b)
 	sig, _ := crypto.Sign(key, msg)
-	b, _ = json.Marshal(map[string]interface{}{
+	b, _ = json.Marshal(map[string]any{
 		"action":    "SIGN",
 		"identity":  crypto.PublicKeyString(pkey),
 		"data":      base64.RawURLEncoding.EncodeToString(cipher[:]),

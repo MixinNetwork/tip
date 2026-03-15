@@ -20,39 +20,39 @@ func SetLevel(l int) {
 	level = l
 }
 
-func Errorf(format string, v ...interface{}) {
+func Errorf(format string, v ...any) {
 	printfAtLevel(ERROR, format, v...)
 }
 
-func Error(v ...interface{}) {
+func Error(v ...any) {
 	printAtLevel(ERROR, v...)
 }
 
-func Infof(format string, v ...interface{}) {
+func Infof(format string, v ...any) {
 	printfAtLevel(INFO, format, v...)
 }
 
-func Info(v ...interface{}) {
+func Info(v ...any) {
 	printAtLevel(INFO, v...)
 }
 
-func Verbosef(format string, v ...interface{}) {
+func Verbosef(format string, v ...any) {
 	printfAtLevel(VERBOSE, format, v...)
 }
 
-func Verbose(v ...interface{}) {
+func Verbose(v ...any) {
 	printAtLevel(VERBOSE, v...)
 }
 
-func Debugf(format string, v ...interface{}) {
+func Debugf(format string, v ...any) {
 	printfAtLevel(DEBUG, format, v...)
 }
 
-func Debug(v ...interface{}) {
+func Debug(v ...any) {
 	printAtLevel(DEBUG, v...)
 }
 
-func printfAtLevel(l int, format string, v ...interface{}) {
+func printfAtLevel(l int, format string, v ...any) {
 	if level < l {
 		return
 	}
@@ -60,7 +60,7 @@ func printfAtLevel(l int, format string, v ...interface{}) {
 	log.Print(out)
 }
 
-func printAtLevel(l int, v ...interface{}) {
+func printAtLevel(l int, v ...any) {
 	if level < l {
 		return
 	}
