@@ -4,11 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha3"
 
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/util/random"
-	"golang.org/x/crypto/sha3"
 )
 
 func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {

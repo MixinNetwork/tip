@@ -2,6 +2,7 @@ package signer
 
 import (
 	"context"
+	"crypto/sha3"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -14,7 +15,14 @@ import (
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
 	"github.com/drand/kyber/sign/bdn"
-	"golang.org/x/crypto/sha3"
+)
+
+var (
+	newDKGProtocol = dkg.NewProtocol
+	waitDKGResult  = func(protocol *dkg.Protocol) <-chan dkg.OptionResult { return protocol.WaitEnd() }
+	runDKGProtocol = func(node *Node, ctx context.Context, protocol *dkg.Protocol) ([]byte, []byte, error) {
+		return node.runDKG(ctx, protocol)
+	}
 )
 
 func (node *Node) setup(ctx context.Context, nonce uint64) error {
@@ -44,7 +52,7 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 	}
 
 	node.board = node.NewBoard(ctx, nonce)
-	protocol, err := dkg.NewProtocol(conf, node.board, node, false)
+	protocol, err := newDKGProtocol(conf, node.board, node, false)
 	logger.Verbose("NewProtocol", protocol, err)
 	if err != nil {
 		return err
@@ -52,7 +60,7 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 	node.phaser <- dkg.DealPhase
 	go func() {
 		defer node.dkgDone()
-		pub, priv, err = node.runDKG(ctx, protocol)
+		pub, priv, err = runDKGProtocol(node, ctx, protocol)
 		logger.Verbose("runDKG", hex.EncodeToString(pub), hex.EncodeToString(priv), err)
 		if err != nil {
 			panic(err)
@@ -70,7 +78,7 @@ func (node *Node) NextPhase() chan dkg.Phase {
 }
 
 func (node *Node) runDKG(_ context.Context, protocol *dkg.Protocol) ([]byte, []byte, error) {
-	resCh := protocol.WaitEnd()
+	resCh := waitDKGResult(protocol)
 	optRes := <-resCh
 	if optRes.Error != nil {
 		return nil, nil, optRes.Error

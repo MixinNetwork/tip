@@ -2,9 +2,10 @@ package signer
 
 import (
 	"context"
+	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
@@ -13,7 +14,6 @@ import (
 	"github.com/drand/kyber"
 	"github.com/drand/kyber/share"
 	"github.com/drand/kyber/share/dkg"
-	"golang.org/x/crypto/sha3"
 )
 
 type Configuration struct {
@@ -57,7 +57,7 @@ func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage
 	node.key = scalar
 	node.identity = crypto.PublicKey(scalar)
 	var group []byte
-	sort.Slice(conf.Signers, func(i, j int) bool { return conf.Signers[i] < conf.Signers[j] })
+	slices.Sort(conf.Signers)
 	for i, s := range conf.Signers {
 		point, err := crypto.PubKeyFromBase58(s)
 		if err != nil {
@@ -75,7 +75,7 @@ func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage
 	groupId := sha3.Sum256(group)
 	valid, err := store.CheckPolyGroup(groupId[:])
 	if err != nil || !valid {
-		panic(fmt.Errorf("Group check failed %v %v", valid, err))
+		panic(fmt.Errorf("group check failed %v %v", valid, err))
 	}
 	if node.index < 0 {
 		panic(node.index)

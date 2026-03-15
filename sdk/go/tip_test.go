@@ -13,40 +13,40 @@ import (
 	"github.com/MixinNetwork/tip/api"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTip(t *testing.T) {
-	assert := assert.New(t)
+	require := require.New(t)
 	for _, port := range []int{7021, 7022, 7023, 7024} {
 		go testRunServer(port)
 	}
 
 	time.Sleep(2 * time.Second)
 	client, evicted, err := NewClient(testConfigurationJSON())
-	assert.Nil(err)
-	assert.Len(evicted, 0)
+	require.Nil(err)
+	require.Len(evicted, 0)
 	key := "8bee954d5315684caa46d78fb8456a165bdd0cb44643d335a6b15c21d8c1872b"
 	ephemeral := "2b5a6b0cb9576ea218d081baa14d2cea82a6839165a29b3bdfc6ef8582b0ce5a"
 	watcher := "2b5a6b0cb9576ea218d081baa14d2cea82a6839165a29b3bdfc6ef8582b0ce5a"
 	grace := int64(time.Hour * 24 * 128)
 	var nonce int64 = 123
 	sig, evicted, err := client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
-	assert.Nil(err)
-	assert.Len(evicted, 0)
+	require.Nil(err)
+	require.Len(evicted, 0)
 	log.Println(hex.EncodeToString(sig))
 
 	nonce = 123
 	sig, evicted, err = client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
-	assert.NotNil(err)
-	assert.Len(evicted, 4)
-	assert.Len(sig, 0)
+	require.NotNil(err)
+	require.Len(evicted, 4)
+	require.Len(sig, 0)
 
 	nonce = 1234
 	sig, evicted, err = client.Sign(key, ephemeral, nonce, grace, "", "", watcher)
-	assert.Nil(err)
-	assert.Len(evicted, 0)
-	assert.Equal("8258bc1a22db4865529d7c01a949d303e4d834d6fe79fcf746c6ad3fcb2ee37583975a034eea3ad08105c856f5c302ed02e2b11b71440d9e31da5b06097b691f", hex.EncodeToString(sig))
+	require.Nil(err)
+	require.Len(evicted, 0)
+	require.Equal("8258bc1a22db4865529d7c01a949d303e4d834d6fe79fcf746c6ad3fcb2ee37583975a034eea3ad08105c856f5c302ed02e2b11b71440d9e31da5b06097b691f", hex.EncodeToString(sig))
 	log.Println(hex.EncodeToString(sig))
 }
 

@@ -5,11 +5,11 @@ import (
 
 	"github.com/drand/kyber/pairing/bn256"
 	"github.com/drand/kyber/util/random"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDH(t *testing.T) {
-	assert := assert.New(t)
+	require := require.New(t)
 
 	suite := bn256.NewSuiteG2()
 	s1 := suite.Scalar().Pick(random.New())
@@ -19,19 +19,19 @@ func TestDH(t *testing.T) {
 
 	d1 := ecdh(p2, s1)
 	d2 := ecdh(p1, s2)
-	assert.Equal(d1, d2)
+	require.Equal(d1, d2)
 
 	d1 = ecdh(p1, s1)
 	d2 = ecdh(p2, s2)
-	assert.NotEqual(d1, d2)
+	require.NotEqual(d1, d2)
 
 	i1 := ecdh(bn256.NewSuiteG2().Point(), s1)
 	i2 := ecdh(bn256.NewSuiteG2().Point(), s2)
-	assert.NotEqual(i1, i2)
+	require.NotEqual(i1, i2)
 }
 
 func TestEncDec(t *testing.T) {
-	assert := assert.New(t)
+	require := require.New(t)
 
 	suite := bn256.NewSuiteG2()
 	s1 := suite.Scalar().Pick(random.New())
@@ -41,7 +41,7 @@ func TestEncDec(t *testing.T) {
 
 	text := []byte("hello")
 	b := EncryptECDH(p2, s1, text)
-	assert.Len(b, 12+16+len(text))
+	require.Len(b, 12+16+len(text))
 	dec := DecryptECDH(p1, s2, b)
-	assert.Equal(text, dec)
+	require.Equal(text, dec)
 }
