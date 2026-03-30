@@ -33,6 +33,8 @@ func Decrypt(secret, b []byte) []byte {
 	if err != nil {
 		return nil
 	}
+	// Valid ciphertext requires at least a nonce (12 bytes for GCM) plus
+	// the authentication tag (16 bytes for GCM).
 	if len(b) < aead.NonceSize()+aead.Overhead() {
 		return nil
 	}

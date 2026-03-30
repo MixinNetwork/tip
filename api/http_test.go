@@ -259,8 +259,9 @@ func TestMaxBytesReaderAllowsLargeSignRequests(t *testing.T) {
 
 	hdr := testHandler(testScalar(), &stubStore{})
 
-	// Simulate a request body around 2KB (e.g. SIGN with assignee+rotate fields).
-	// The previous limit of 1024 would reject this; the corrected limit accepts it.
+	// A SIGN request with assignee+rotate fields produces ~1637 bytes.
+	// Use 180 for identity (base58 public key) and 1200 for encrypted data
+	// to create a ~1600-byte body that would fail under the old 1024 limit.
 	payload := `{"action":"SIGN","identity":"` + string(bytes.Repeat([]byte("A"), 180)) + `","data":"` + string(bytes.Repeat([]byte("B"), 1200)) + `","signature":"abcd","watcher":"abcd"}`
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(payload))
 	rec := httptest.NewRecorder()
@@ -277,8 +278,8 @@ func TestMaxBytesReaderRejectsOversizedRequests(t *testing.T) {
 
 	hdr := testHandler(testScalar(), &stubStore{})
 
-	// A body larger than 4096 bytes should be rejected
-	payload := `{"action":"SIGN","data":"` + string(bytes.Repeat([]byte("X"), 5000)) + `"}`
+	// A body larger than 4096 bytes must be rejected
+	payload := `{"action":"SIGN","data":"` + string(bytes.Repeat([]byte("X"), 4096)) + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(payload))
 	rec := httptest.NewRecorder()
 	hdr.ServeHTTP(rec, req)
