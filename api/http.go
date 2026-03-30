@@ -63,7 +63,7 @@ func (hdr *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 1024)
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var body SignRequest
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {

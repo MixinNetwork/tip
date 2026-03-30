@@ -253,3 +253,35 @@ func TestHandleCORSPassesThroughAndHandlesOptions(t *testing.T) {
 	require.Equal(http.StatusCreated, getRec.Code)
 	require.Equal("https://example.com", getRec.Header().Get("Access-Control-Allow-Origin"))
 }
+
+func TestMaxBytesReaderAllowsLargeSignRequests(t *testing.T) {
+	require := require.New(t)
+
+	hdr := testHandler(testScalar(), &stubStore{})
+
+	// Simulate a request body around 2KB (e.g. SIGN with assignee+rotate fields).
+	// The previous limit of 1024 would reject this; the corrected limit accepts it.
+	payload := `{"action":"SIGN","identity":"` + string(bytes.Repeat([]byte("A"), 180)) + `","data":"` + string(bytes.Repeat([]byte("B"), 1200)) + `","signature":"abcd","watcher":"abcd"}`
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(payload))
+	rec := httptest.NewRecorder()
+	hdr.ServeHTTP(rec, req)
+
+	// The request should be decoded (not rejected by MaxBytesReader).
+	// It will fail downstream at signature/data validation, but NOT at JSON decode.
+	// A StatusBadRequest from MaxBytesReader would indicate the limit is too small.
+	require.NotEqual(http.StatusBadRequest, rec.Code)
+}
+
+func TestMaxBytesReaderRejectsOversizedRequests(t *testing.T) {
+	require := require.New(t)
+
+	hdr := testHandler(testScalar(), &stubStore{})
+
+	// A body larger than 4096 bytes should be rejected
+	payload := `{"action":"SIGN","data":"` + string(bytes.Repeat([]byte("X"), 5000)) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(payload))
+	rec := httptest.NewRecorder()
+	hdr.ServeHTTP(rec, req)
+
+	require.Equal(http.StatusBadRequest, rec.Code)
+}
