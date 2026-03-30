@@ -45,3 +45,15 @@ func TestEncDec(t *testing.T) {
 	dec := DecryptECDH(p1, s2, b)
 	require.Equal(text, dec)
 }
+
+func TestDecryptShortInput(t *testing.T) {
+	require := require.New(t)
+
+	secret := make([]byte, 32)
+
+	require.Nil(Decrypt(secret, nil))
+	require.Nil(Decrypt(secret, []byte{}))
+	require.Nil(Decrypt(secret, []byte{1, 2, 3}))
+	require.Nil(Decrypt(secret, make([]byte, 11)))
+	require.Nil(Decrypt(secret, make([]byte, 27)))
+}

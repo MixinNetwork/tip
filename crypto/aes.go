@@ -25,8 +25,19 @@ func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
 }
 
 func Decrypt(secret, b []byte) []byte {
-	aes, _ := aes.NewCipher(secret)
-	aead, _ := cipher.NewGCM(aes)
+	aes, err := aes.NewCipher(secret)
+	if err != nil {
+		return nil
+	}
+	aead, err := cipher.NewGCM(aes)
+	if err != nil {
+		return nil
+	}
+	// Valid ciphertext requires at least a nonce (12 bytes for GCM) plus
+	// the authentication tag (16 bytes for GCM).
+	if len(b) < aead.NonceSize()+aead.Overhead() {
+		return nil
+	}
 	nonce := b[:aead.NonceSize()]
 	cipher := b[aead.NonceSize():]
 	d, _ := aead.Open(nil, nonce, cipher, nil)
