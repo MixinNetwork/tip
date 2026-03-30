@@ -51,9 +51,9 @@ func TestDecryptShortInput(t *testing.T) {
 
 	secret := make([]byte, 32)
 
-	require.Nil(Decrypt(secret, nil))
-	require.Nil(Decrypt(secret, []byte{}))
-	require.Nil(Decrypt(secret, []byte{1, 2, 3}))
-	require.Nil(Decrypt(secret, make([]byte, 11)))
-	require.Nil(Decrypt(secret, make([]byte, 27)))
+	require.Nil(decrypt(secret, nil))
+	require.Nil(decrypt(secret, []byte{}))
+	require.Nil(decrypt(secret, []byte{1, 2, 3}))
+	require.Nil(decrypt(secret, make([]byte, 11)))
+	require.Nil(decrypt(secret, make([]byte, 27)))
 }

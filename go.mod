@@ -5,7 +5,7 @@ go 1.26.1
 replace github.com/dgraph-io/badger/v4 => github.com/MixinNetwork/badger/v4 v4.9.0-F1
 
 require (
-	github.com/MixinNetwork/bot-api-go-client/v3 v3.22.0
+	github.com/MixinNetwork/bot-api-go-client/v3 v3.23.0
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/dgraph-io/badger/v4 v4.9.1
 	github.com/drand/kyber v1.3.2
@@ -21,7 +21,7 @@ require (
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/MixinNetwork/go-number v0.2.0 // indirect
-	github.com/MixinNetwork/mixin v0.18.32 // indirect
+	github.com/MixinNetwork/mixin v0.18.33 // indirect
 	github.com/btcsuite/btcutil v1.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
@@ -35,7 +35,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pkg/errors v0.9.1 // indirect

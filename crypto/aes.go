@@ -24,7 +24,7 @@ func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {
 	return sum[:]
 }
 
-func Decrypt(secret, b []byte) []byte {
+func decrypt(secret, b []byte) []byte {
 	aes, err := aes.NewCipher(secret)
 	if err != nil {
 		return nil
@@ -44,7 +44,7 @@ func Decrypt(secret, b []byte) []byte {
 	return d
 }
 
-func Encrypt(secret, b []byte) []byte {
+func encrypt(secret, b []byte) []byte {
 	aes, err := aes.NewCipher(secret)
 	if err != nil {
 		panic(err)
@@ -64,10 +64,10 @@ func Encrypt(secret, b []byte) []byte {
 
 func DecryptECDH(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 	secret := ecdh(pub, priv)
-	return Decrypt(secret, b)
+	return decrypt(secret, b)
 }
 
 func EncryptECDH(pub kyber.Point, priv kyber.Scalar, b []byte) []byte {
 	secret := ecdh(pub, priv)
-	return Encrypt(secret, b)
+	return encrypt(secret, b)
 }
