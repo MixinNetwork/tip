@@ -59,7 +59,7 @@ func (hdr *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data, sig := info(hdr.conf.Key, hdr.conf.Signers, hdr.conf.Poly)
-	hdr.json(w, r, http.StatusOK, map[string]any{"data": data, "signature": sig, "version": "v0.2.0"})
+	hdr.json(w, r, http.StatusOK, map[string]any{"data": data, "signature": sig, "version": "v0.4.2"})
 }
 
 func (hdr *Handler) handle(w http.ResponseWriter, r *http.Request) {

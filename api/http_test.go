@@ -173,7 +173,7 @@ func TestServeHTTPGetRoot(t *testing.T) {
 		Version   string         `json:"version"`
 	}
 	require.NoError(json.Unmarshal(rec.Body.Bytes(), &body))
-	require.Equal("v0.2.0", body.Version)
+	require.Equal("v0.4.2", body.Version)
 	require.Equal(crypto.PublicKeyString(crypto.PublicKey(key)), body.Data["identity"])
 
 	rawSig, err := hex.DecodeString(body.Signature)
