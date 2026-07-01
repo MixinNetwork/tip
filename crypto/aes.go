@@ -6,9 +6,9 @@ import (
 	"crypto/rand"
 	"crypto/sha3"
 
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/util/random"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/util/random"
 )
 
 func ecdh(point kyber.Point, scalar kyber.Scalar) []byte {

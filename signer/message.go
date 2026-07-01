@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
-	"github.com/drand/kyber"
+	"go.dedis.ch/kyber/v4"
 )
 
 const (

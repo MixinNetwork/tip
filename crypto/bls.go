@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/address/v2/base58"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/sign/bdn"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/sign/bdn"
 )
 
 const (

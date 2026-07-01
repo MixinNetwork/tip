@@ -13,7 +13,7 @@ import (
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/drand/kyber"
+	"go.dedis.ch/kyber/v4"
 )
 
 const (

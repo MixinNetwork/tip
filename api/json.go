@@ -11,11 +11,11 @@ import (
 	"github.com/MixinNetwork/tip/keeper"
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/share"
-	"github.com/drand/kyber/share/dkg"
-	"github.com/drand/kyber/sign/tbls"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/share"
+	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	"go.dedis.ch/kyber/v4/sign/tbls"
 )
 
 type SignRequest struct {

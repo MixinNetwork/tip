@@ -15,11 +15,11 @@ import (
 	tip "github.com/MixinNetwork/tip/sdk/go"
 	"github.com/MixinNetwork/tip/signer"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/sign/bdn"
-	"github.com/drand/kyber/util/random"
 	"github.com/fox-one/mixin-sdk-go/v2"
 	"github.com/urfave/cli/v2"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/sign/bdn"
+	"go.dedis.ch/kyber/v4/util/random"
 )
 
 func main() {

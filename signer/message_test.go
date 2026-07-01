@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/MixinNetwork/tip/crypto"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/share/dkg"
-	"github.com/drand/kyber/util/random"
 	"github.com/stretchr/testify/require"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	"go.dedis.ch/kyber/v4/util/random"
 )
 
 func signerTestScalar() kyber.Scalar {
@@ -132,8 +132,8 @@ func TestResponseAndJustificationBundleRoundTrip(t *testing.T) {
 	rb := &dkg.ResponseBundle{
 		ShareIndex: 3,
 		Responses: []dkg.Response{
-			{DealerIndex: 1, Status: true},
-			{DealerIndex: 2, Status: false},
+			{DealerIndex: 1, Status: dkg.Success},
+			{DealerIndex: 2, Status: dkg.Complaint},
 		},
 		SessionID: []byte("session"),
 		Signature: []byte("signature"),

@@ -9,12 +9,11 @@ import (
 
 	"github.com/MixinNetwork/tip/crypto"
 	"github.com/MixinNetwork/tip/logger"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/group/mod"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/share"
-	"github.com/drand/kyber/share/dkg"
-	"github.com/drand/kyber/sign/bdn"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/share"
+	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	"go.dedis.ch/kyber/v4/sign/bdn"
 )
 
 var (
@@ -43,7 +42,7 @@ func (node *Node) setup(ctx context.Context, nonce uint64) error {
 	suite := bn256.NewSuiteG2()
 	conf := &dkg.Config{
 		Suite:     suite,
-		Threshold: node.Threshold(),
+		Threshold: uint32(node.Threshold()),
 		Longterm:  node.key,
 		Nonce:     node.getNonce(nonce),
 		Auth:      bdn.NewSchemeOnG1(suite),
@@ -84,7 +83,7 @@ func (node *Node) runDKG(_ context.Context, protocol *dkg.Protocol) ([]byte, []b
 		return nil, nil, optRes.Error
 	}
 	res := optRes.Result
-	if i := res.Key.PriShare().I; i != node.index {
+	if i := res.Key.PriShare().I; int(i) != node.index {
 		return nil, nil, fmt.Errorf("private share index malformed %d %d", node.index, i)
 	}
 	priv := marshalPrivShare(res.Key.PriShare())
@@ -94,14 +93,14 @@ func (node *Node) runDKG(_ context.Context, protocol *dkg.Protocol) ([]byte, []b
 
 func unmarshalPrivShare(b []byte) *share.PriShare {
 	var ps share.PriShare
-	ps.V = mod.NewInt64(0, bn256.Order).SetBytes(b[4:])
-	ps.I = int(binary.BigEndian.Uint32(b[:4]))
+	ps.V = bn256.NewSuiteG2().Scalar().SetBytes(b[4:])
+	ps.I = binary.BigEndian.Uint32(b[:4])
 	return &ps
 }
 
 func marshalPrivShare(ps *share.PriShare) []byte {
 	var buf [4]byte
-	binary.BigEndian.PutUint32(buf[:], uint32(ps.I))
+	binary.BigEndian.PutUint32(buf[:], ps.I)
 	b := crypto.PrivateKeyBytes(ps.V)
 	return append(buf[:], b...)
 }

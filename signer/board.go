@@ -5,8 +5,8 @@ import (
 
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/messenger"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/share/dkg"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
 )
 
 type Board struct {

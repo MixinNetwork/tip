@@ -8,13 +8,13 @@ require (
 	github.com/MixinNetwork/bot-api-go-client/v3 v3.24.4
 	github.com/btcsuite/btcd/address/v2 v2.0.0
 	github.com/dgraph-io/badger/v4 v4.9.2
-	github.com/drand/kyber v1.3.2
 	github.com/fox-one/mixin-sdk-go/v2 v2.1.3
 	github.com/gofrs/uuid/v5 v5.4.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/stretchr/testify v1.11.1
 	github.com/unrolled/render v1.7.0
 	github.com/urfave/cli/v2 v2.27.7
+	go.dedis.ch/kyber/v4 v4.0.2
 	golang.org/x/crypto v0.53.0
 )
 

@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/MixinNetwork/tip/crypto"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/share/dkg"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
 )
 
 func encodeJustificationBundle(jb *dkg.JustificationBundle) []byte {
@@ -79,7 +79,7 @@ func encodeResponseBundle(rb *dkg.ResponseBundle) []byte {
 	enc.WriteInt(len(rb.Responses))
 	for _, r := range rb.Responses {
 		enc.WriteUint32(r.DealerIndex)
-		enc.WriteBool(r.Status)
+		enc.WriteBool(r.Status == dkg.Success)
 	}
 
 	enc.WriteFixedBytes(rb.SessionID)
@@ -111,9 +111,13 @@ func decodeResponseBundle(b []byte) (*dkg.ResponseBundle, error) {
 		if err != nil {
 			return nil, err
 		}
+		status := dkg.Complaint
+		if ss {
+			status = dkg.Success
+		}
 		rb.Responses = append(rb.Responses, dkg.Response{
 			DealerIndex: di,
-			Status:      ss,
+			Status:      status,
 		})
 	}
 

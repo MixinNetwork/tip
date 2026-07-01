@@ -8,10 +8,10 @@ import (
 
 	"github.com/MixinNetwork/tip/logger"
 	"github.com/MixinNetwork/tip/store"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/share"
-	"github.com/drand/kyber/share/dkg"
 	"github.com/unrolled/render"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/share"
+	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
 )
 
 type Handler struct {

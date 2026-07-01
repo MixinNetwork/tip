@@ -10,10 +10,10 @@ import (
 	"fmt"
 
 	"github.com/MixinNetwork/tip/crypto"
-	"github.com/drand/kyber"
-	"github.com/drand/kyber/pairing/bn256"
-	"github.com/drand/kyber/share"
-	"github.com/drand/kyber/sign/tbls"
+	"go.dedis.ch/kyber/v4"
+	"go.dedis.ch/kyber/v4/pairing/bn256"
+	"go.dedis.ch/kyber/v4/share"
+	"go.dedis.ch/kyber/v4/sign/tbls"
 )
 
 type Client struct {
@@ -149,7 +149,7 @@ func (c *Client) Sign(ks, ephemeral string, nonce, grace int64, rotate, assignee
 	suite := bn256.NewSuiteG2()
 	scheme := tbls.NewThresholdSchemeOnG1(bn256.NewSuiteG2())
 	poly := share.NewPubPoly(suite, suite.Point().Base(), c.commitments)
-	sig, err := scheme.Recover(poly, assignor, partials, len(c.commitments), len(c.signers))
+	sig, err := scheme.Recover(poly, assignor, partials, uint32(len(c.commitments)), uint32(len(c.signers)))
 	if err != nil {
 		return nil, evicted, err
 	}
