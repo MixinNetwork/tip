@@ -9,7 +9,7 @@ import (
 
 	"github.com/MixinNetwork/bot-api-go-client/v3"
 	"github.com/MixinNetwork/tip/logger"
-	"github.com/fox-one/mixin-sdk-go/v2"
+	"github.com/fox-one/mixin-sdk-go/v3"
 	"github.com/gofrs/uuid/v5"
 )
 
