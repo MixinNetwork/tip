@@ -12,7 +12,7 @@ import (
 	"go.dedis.ch/kyber/v4"
 	"go.dedis.ch/kyber/v4/pairing/bn256"
 	"go.dedis.ch/kyber/v4/share"
-	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	dkg "go.dedis.ch/kyber/v4/share/dkg/pedersen"
 	"go.dedis.ch/kyber/v4/sign/bdn"
 )
 

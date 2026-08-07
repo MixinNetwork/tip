@@ -11,7 +11,7 @@ import (
 	"github.com/unrolled/render"
 	"go.dedis.ch/kyber/v4"
 	"go.dedis.ch/kyber/v4/share"
-	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	dkg "go.dedis.ch/kyber/v4/share/dkg/pedersen"
 )
 
 type Handler struct {
@@ -129,11 +129,12 @@ func handleCORS(handler http.Handler) http.Handler {
 	})
 }
 
-func handlePanic(_ http.ResponseWriter, _ *http.Request) {
+func handlePanic(w http.ResponseWriter, r *http.Request) {
 	rcv := recover()
 	if rcv == nil {
 		return
 	}
 	err := fmt.Sprint(rcv)
-	logger.Error(err)
+	logger.Errorf("handlePanic(%v) => %v", r, err)
+	_ = render.New().JSON(w, http.StatusInternalServerError, map[string]any{})
 }

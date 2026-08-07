@@ -13,7 +13,7 @@ import (
 	"github.com/MixinNetwork/tip/store"
 	"go.dedis.ch/kyber/v4"
 	"go.dedis.ch/kyber/v4/share"
-	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	dkg "go.dedis.ch/kyber/v4/share/dkg/pedersen"
 )
 
 type Configuration struct {
@@ -95,7 +95,6 @@ func NewNode(ctx context.Context, cancel context.CancelFunc, store store.Storage
 	if err != nil {
 		panic(err)
 	} else if len(priv) > 0 {
-		logger.Infof("Poly share: %s\n", hex.EncodeToString(priv))
 		node.share = unmarshalPrivShare(priv)
 	}
 	return node
