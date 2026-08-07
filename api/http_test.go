@@ -15,7 +15,7 @@ import (
 	"go.dedis.ch/kyber/v4"
 	"go.dedis.ch/kyber/v4/pairing/bn256"
 	"go.dedis.ch/kyber/v4/share"
-	"go.dedis.ch/kyber/v4/share/dkg/pedersen"
+	dkg "go.dedis.ch/kyber/v4/share/dkg/pedersen"
 	"go.dedis.ch/kyber/v4/util/random"
 )
 
@@ -173,7 +173,7 @@ func TestServeHTTPGetRoot(t *testing.T) {
 		Version   string         `json:"version"`
 	}
 	require.NoError(json.Unmarshal(rec.Body.Bytes(), &body))
-	require.Equal("v0.4.2", body.Version)
+	require.Equal("v0.5.0", body.Version)
 	require.Equal(crypto.PublicKeyString(crypto.PublicKey(key)), body.Data["identity"])
 
 	rawSig, err := hex.DecodeString(body.Signature)

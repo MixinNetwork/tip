@@ -141,10 +141,14 @@ func TestNewServerAndHandlePanic(t *testing.T) {
 	require.Equal(120*time.Second, server.IdleTimeout)
 	require.NotNil(server.Handler)
 
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	func() {
-		defer handlePanic(nil, nil)
+		defer handlePanic(rec, req)
 		panic("boom")
 	}()
+	require.Equal(http.StatusInternalServerError, rec.Code)
+	require.JSONEq(`{}`, rec.Body.String())
 }
 
 func TestSignSuccess(t *testing.T) {
